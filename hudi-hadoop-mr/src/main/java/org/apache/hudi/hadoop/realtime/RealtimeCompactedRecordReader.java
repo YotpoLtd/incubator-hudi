@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Map;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
@@ -36,15 +35,15 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 
 class RealtimeCompactedRecordReader extends AbstractRealtimeRecordReader
-    implements RecordReader<NullWritable, ArrayWritable> {
+    implements RecordReader<Void, ArrayWritable> {
 
   private static final Logger LOG = LogManager.getLogger(AbstractRealtimeRecordReader.class);
 
-  protected final RecordReader<NullWritable, ArrayWritable> parquetReader;
+  protected final RecordReader<Void, ArrayWritable> parquetReader;
   private final Map<String, HoodieRecord<? extends HoodieRecordPayload>> deltaRecordMap;
 
   public RealtimeCompactedRecordReader(HoodieRealtimeFileSplit split, JobConf job,
-      RecordReader<NullWritable, ArrayWritable> realReader) throws IOException {
+      RecordReader<Void, ArrayWritable> realReader) throws IOException {
     super(split, job);
     this.parquetReader = realReader;
     this.deltaRecordMap = getMergedLogRecordScanner().getRecords();
@@ -68,7 +67,7 @@ class RealtimeCompactedRecordReader extends AbstractRealtimeRecordReader
   }
 
   @Override
-  public boolean next(NullWritable aVoid, ArrayWritable arrayWritable) throws IOException {
+  public boolean next(Void aVoid, ArrayWritable arrayWritable) throws IOException {
     // Call the underlying parquetReader.next - which may replace the passed in ArrayWritable
     // with a new block of values
     boolean result = this.parquetReader.next(aVoid, arrayWritable);
@@ -123,7 +122,7 @@ class RealtimeCompactedRecordReader extends AbstractRealtimeRecordReader
   }
 
   @Override
-  public NullWritable createKey() {
+  public Void createKey() {
     return parquetReader.createKey();
   }
 

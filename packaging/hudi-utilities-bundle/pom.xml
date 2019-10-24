@@ -101,7 +101,7 @@
 
                   <include>org.apache.hive:hive-common</include>
                   <include>org.apache.hive:hive-service</include>
-                  <include>org.apache.hive:hive-service-rpc</include>
+                  <!--<include>org.apache.hive:hive-service-rpc</include>-->
                   <include>org.apache.hive:hive-metastore</include>
                   <include>org.apache.hive:hive-jdbc</include>
                 </includes>
@@ -111,7 +111,7 @@
                   <pattern>com.beust.jcommander.</pattern>
                   <shadedPattern>org.apache.hudi.com.beust.jcommander.</shadedPattern>
                 </relocation>
-                <relocation>
+                <!--<relocation>
                   <pattern>org.apache.hive.jdbc.</pattern>
                   <shadedPattern>org.apache.hudi.org.apache.hive.jdbc.</shadedPattern>
                 </relocation>
@@ -146,7 +146,7 @@
                 <relocation>
                   <pattern>org.apache.commons.codec.</pattern>
                   <shadedPattern>org.apache.hudi.org.apache.commons.codec.</shadedPattern>
-                </relocation>
+                </relocation>-->
               </relocations>
               <filters>
                 <filter>
@@ -224,12 +224,12 @@
       <scope>compile</scope>
     </dependency>
 
-    <dependency>
+    <!--<dependency>
       <groupId>${hive.groupid}</groupId>
       <artifactId>hive-service-rpc</artifactId>
-      <version>${hive.version}</version>
+      <version>${hiveservice.version}</version>
       <scope>compile</scope>
-    </dependency>
+    </dependency>-->
 
     <dependency>
       <groupId>${hive.groupid}</groupId>

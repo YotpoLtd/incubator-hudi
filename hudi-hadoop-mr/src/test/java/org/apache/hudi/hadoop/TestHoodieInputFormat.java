@@ -25,7 +25,6 @@ import java.io.IOException;
 import org.apache.avro.Schema;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -194,8 +193,8 @@ public class TestHoodieInputFormat {
     int totalCount = 0;
     InputSplit[] splits = inputFormat.getSplits(jobConf, 1);
     for (InputSplit split : splits) {
-      RecordReader<NullWritable, ArrayWritable> recordReader = inputFormat.getRecordReader(split, jobConf, null);
-      NullWritable key = recordReader.createKey();
+      RecordReader<Void, ArrayWritable> recordReader = inputFormat.getRecordReader(split, jobConf, null);
+      Void key = recordReader.createKey();
       ArrayWritable writable = recordReader.createValue();
 
       while (recordReader.next(key, writable)) {

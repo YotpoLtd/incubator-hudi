@@ -141,7 +141,7 @@ public class HoodieCombineHiveInputFormat<K extends WritableComparable, V extend
 
     private String inputFormatClassName;
     private CombineFileSplit inputSplitShim;
-    private Map<Path, PartitionDesc> pathToPartitionInfo;
+    private Map<String, PartitionDesc> pathToPartitionInfo;
 
     public CombineHiveInputSplit() throws IOException {
       this(ShimLoader.getHadoopShims().getCombineFileInputFormat().getInputSplitShim());
@@ -156,7 +156,7 @@ public class HoodieCombineHiveInputFormat<K extends WritableComparable, V extend
     }
 
     public CombineHiveInputSplit(JobConf job, CombineFileSplit inputSplitShim,
-        Map<Path, PartitionDesc> pathToPartitionInfo) throws IOException {
+        Map<String, PartitionDesc> pathToPartitionInfo) throws IOException {
       this.inputSplitShim = inputSplitShim;
       this.pathToPartitionInfo = pathToPartitionInfo;
       if (job != null) {
@@ -345,10 +345,10 @@ public class HoodieCombineHiveInputFormat<K extends WritableComparable, V extend
   /**
    * Create Hive splits based on CombineFileSplit.
    */
-  private InputSplit[] getCombineSplits(JobConf job, int numSplits, Map<Path, PartitionDesc> pathToPartitionInfo)
+  private InputSplit[] getCombineSplits(JobConf job, int numSplits, Map<String, PartitionDesc> pathToPartitionInfo)
       throws IOException {
     init(job);
-    Map<Path, ArrayList<String>> pathToAliases = mrwork.getPathToAliases();
+    Map<String, ArrayList<String>> pathToAliases = mrwork.getPathToAliases();
     Map<String, Operator<? extends OperatorDesc>> aliasToWork = mrwork.getAliasToWork();
     /** MOD - Initialize a custom combine input format shim that will call listStatus on the custom inputFormat **/
     HoodieCombineHiveInputFormat.HoodieCombineFileInputFormatShim combine =
@@ -569,7 +569,7 @@ public class HoodieCombineHiveInputFormat<K extends WritableComparable, V extend
     // Process the combine splits
     if (combinablePaths.size() > 0) {
       FileInputFormat.setInputPaths(job, combinablePaths.toArray(new Path[combinablePaths.size()]));
-      Map<Path, PartitionDesc> pathToPartitionInfo = this.pathToPartitionInfo != null ? this.pathToPartitionInfo
+      Map<String, PartitionDesc> pathToPartitionInfo = this.pathToPartitionInfo != null ? this.pathToPartitionInfo
           : Utilities.getMapWork(job).getPathToPartitionInfo();
       InputSplit[] splits = getCombineSplits(job, numSplits, pathToPartitionInfo);
       for (InputSplit split : splits) {
@@ -634,8 +634,8 @@ public class HoodieCombineHiveInputFormat<K extends WritableComparable, V extend
     HashMap<String, SplitSample> nameToSamples = mrwork.getNameToSplitSample();
     List<CombineFileSplit> retLists = new ArrayList<CombineFileSplit>();
     Map<String, ArrayList<CombineFileSplit>> aliasToSplitList = new HashMap<String, ArrayList<CombineFileSplit>>();
-    Map<Path, ArrayList<String>> pathToAliases = mrwork.getPathToAliases();
-    Map<Path, ArrayList<String>> pathToAliasesNoScheme = removeScheme(pathToAliases);
+    Map<String, ArrayList<String>> pathToAliases = mrwork.getPathToAliases();
+    Map<String, ArrayList<String>> pathToAliasesNoScheme = removeScheme(pathToAliases);
 
     // Populate list of exclusive splits for every sampled alias
     //
@@ -703,12 +703,12 @@ public class HoodieCombineHiveInputFormat<K extends WritableComparable, V extend
     return retLists;
   }
 
-  Map<Path, ArrayList<String>> removeScheme(Map<Path, ArrayList<String>> pathToAliases) {
-    Map<Path, ArrayList<String>> result = new HashMap<>();
-    for (Map.Entry<Path, ArrayList<String>> entry : pathToAliases.entrySet()) {
-      Path newKey = Path.getPathWithoutSchemeAndAuthority(entry.getKey());
+  Map<String, ArrayList<String>> removeScheme(Map<String, ArrayList<String>> pathToAliases) {
+    Map<String, ArrayList<String>> result = new HashMap<>();
+    for (Map.Entry<String, ArrayList<String>> entry : pathToAliases.entrySet()) {
+      Path newKey = new Path(entry.getKey());
       StringInternUtils.internUriStringsInPath(newKey);
-      result.put(newKey, entry.getValue());
+      result.put(newKey.toUri().getPath(), entry.getValue());
     }
     return result;
   }
@@ -733,7 +733,7 @@ public class HoodieCombineHiveInputFormat<K extends WritableComparable, V extend
       throw new IOException("cannot find class " + inputFormatClassName);
     }
 
-    pushProjectionsAndFilters(job, inputFormatClass, hsplit.getPath(0));
+    pushProjectionsAndFilters(job, inputFormatClass, hsplit.getPath(0).toString(),hsplit.getPath(0).toUri().getPath());
 
     return ShimLoader.getHadoopShims().getCombineFileInputFormat().getRecordReader(job, (CombineFileSplit) split,
         reporter, CombineHiveRecordReader.class);

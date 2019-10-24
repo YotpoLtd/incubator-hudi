@@ -20,7 +20,6 @@ package org.apache.hudi.hadoop.realtime;
 
 import java.io.IOException;
 import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hudi.exception.HoodieException;
@@ -31,17 +30,17 @@ import org.apache.log4j.Logger;
  * Realtime Record Reader which can do compacted (merge-on-read) record reading or unmerged reading (parquet and log
  * files read in parallel) based on job configuration.
  */
-public class HoodieRealtimeRecordReader implements RecordReader<NullWritable, ArrayWritable> {
+public class HoodieRealtimeRecordReader implements RecordReader<Void, ArrayWritable> {
 
   // Property to enable parallel reading of parquet and log files without merging.
   public static final String REALTIME_SKIP_MERGE_PROP = "hoodie.realtime.merge.skip";
   // By default, we do merged-reading
   public static final String DEFAULT_REALTIME_SKIP_MERGE = "false";
   private static final transient Logger LOG = LogManager.getLogger(HoodieRealtimeRecordReader.class);
-  private final RecordReader<NullWritable, ArrayWritable> reader;
+  private final RecordReader<Void, ArrayWritable> reader;
 
   public HoodieRealtimeRecordReader(HoodieRealtimeFileSplit split, JobConf job,
-      RecordReader<NullWritable, ArrayWritable> realReader) {
+      RecordReader<Void, ArrayWritable> realReader) {
     this.reader = constructRecordReader(split, job, realReader);
   }
 
@@ -57,8 +56,8 @@ public class HoodieRealtimeRecordReader implements RecordReader<NullWritable, Ar
    * @param realReader Parquet Record Reader
    * @return Realtime Reader
    */
-  private static RecordReader<NullWritable, ArrayWritable> constructRecordReader(HoodieRealtimeFileSplit split,
-      JobConf jobConf, RecordReader<NullWritable, ArrayWritable> realReader) {
+  private static RecordReader<Void, ArrayWritable> constructRecordReader(HoodieRealtimeFileSplit split,
+      JobConf jobConf, RecordReader<Void, ArrayWritable> realReader) {
     try {
       if (canSkipMerging(jobConf)) {
         LOG.info("Enabling un-merged reading of realtime records");
@@ -72,12 +71,12 @@ public class HoodieRealtimeRecordReader implements RecordReader<NullWritable, Ar
   }
 
   @Override
-  public boolean next(NullWritable key, ArrayWritable value) throws IOException {
+  public boolean next(Void key, ArrayWritable value) throws IOException {
     return this.reader.next(key, value);
   }
 
   @Override
-  public NullWritable createKey() {
+  public Void createKey() {
     return this.reader.createKey();
   }
 
