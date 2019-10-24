@@ -16,19 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hudi.common.table.view;
+package org.apache.hudi.common.versioning;
 
-import java.io.IOException;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
-import org.apache.hudi.common.table.HoodieTimeline;
-import org.apache.hudi.common.table.SyncableFileSystemView;
 
-public class RocksDBBasedIncrementalFSViewSyncTest extends IncrementalFSViewSyncTest {
+public abstract class AbstractMigratorBase<T> implements VersionMigrator<T> {
 
-  @Override
-  protected SyncableFileSystemView getFileSystemView(HoodieTableMetaClient metaClient, HoodieTimeline timeline)
-      throws IOException {
-    return new RocksDbBasedFileSystemView(metaClient, timeline, FileSystemViewStorageConfig.newBuilder()
-        .withRocksDBPath(folder.newFolder().getAbsolutePath()).withIncrementalTimelineSync(true).build());
+  protected final HoodieTableMetaClient metaClient;
+
+  public AbstractMigratorBase(HoodieTableMetaClient metaClient) {
+    this.metaClient = metaClient;
   }
+
 }
