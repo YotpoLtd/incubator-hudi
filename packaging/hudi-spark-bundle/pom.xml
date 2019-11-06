@@ -102,14 +102,19 @@
                   <!--<include>org.apache.hive:hive-service-rpc</include>-->
                   <include>org.apache.hive:hive-metastore</include>
                   <include>org.apache.hive:hive-jdbc</include>
+                  <include>org.apache.avro:avro</include>
 
-                  <include>com.databricks:spark-avro_2.11</include>
+                  <!--<include>com.databricks:spark-avro_2.11</include>-->
                 </includes>
               </artifactSet>
               <relocations>
                 <relocation>
                   <pattern>com.beust.jcommander.</pattern>
                   <shadedPattern>org.apache.hudi.com.beust.jcommander.</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.avro</pattern>
+                  <shadedPattern>com.apache.hudi.org.apache.avro</shadedPattern>
                 </relocation>
                 <!--<relocation>
                   <pattern>org.apache.hive.jdbc.</pattern>
