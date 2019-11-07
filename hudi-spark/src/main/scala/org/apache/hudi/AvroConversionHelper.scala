@@ -22,9 +22,10 @@ import java.nio.ByteBuffer
 import java.sql.{Date, Timestamp}
 import java.util
 
-import com.databricks.spark.avro.SchemaConverters
-import com.databricks.spark.avro.SchemaConverters.IncompatibleSchemaException
-import org.apache.avro.{Schema, SchemaBuilder}
+
+import org.apache.avro.Conversions.DecimalConversion
+import org.apache.hudi.SchemaConverters.IncompatibleSchemaException
+import org.apache.avro.{LogicalTypes, Schema, SchemaBuilder}
 import org.apache.avro.Schema.Type._
 import org.apache.avro.generic.GenericData.{Fixed, Record}
 import org.apache.avro.generic.{GenericData, GenericRecord}
@@ -216,7 +217,9 @@ object AvroConversionHelper {
     createConverter(sourceAvroSchema, targetSqlType, List.empty[String])
   }
 
-  def createConverterToAvro(dataType: DataType,
+
+  def createConverterToAvro(avroSchema: Schema,
+                            dataType: DataType,
                             structName: String,
                             recordNamespace: String): Any => Any = {
     dataType match {
@@ -231,13 +234,23 @@ object AvroConversionHelper {
         if (item == null) null else item.asInstanceOf[Byte].intValue
       case ShortType => (item: Any) =>
         if (item == null) null else item.asInstanceOf[Short].intValue
-      case _: DecimalType => (item: Any) => if (item == null) null else item.toString
+
+      case dec: DecimalType => (item: Any) =>
+        Option(item).map { i =>
+          val bigDecimalValue = i.asInstanceOf[java.math.BigDecimal]
+          val decimalConversions = new DecimalConversion()
+          decimalConversions.toFixed(bigDecimalValue, avroSchema.getField(structName).schema().getTypes.get(0),
+            LogicalTypes.decimal(20, 2))
+        }.orNull
       case TimestampType => (item: Any) =>
-        if (item == null) null else item.asInstanceOf[Timestamp].getTime
+        //if (item == null) null else item.asInstanceOf[Timestamp].getTime
+        Option(item).map(_.asInstanceOf[Timestamp].getTime).orNull
       case DateType => (item: Any) =>
-        if (item == null) null else item.asInstanceOf[Date].getTime
+        //if (item == null) null else item.asInstanceOf[Date].getTime
+        Option(item).map(_.asInstanceOf[Date].toLocalDate.toEpochDay.toInt).orNull
       case ArrayType(elementType, _) =>
         val elementConverter = createConverterToAvro(
+          avroSchema,
           elementType,
           structName,
           getNewRecordNamespace(elementType, recordNamespace, structName))
@@ -258,6 +271,7 @@ object AvroConversionHelper {
         }
       case MapType(StringType, valueType, _) =>
         val valueConverter = createConverterToAvro(
+          avroSchema,
           valueType,
           structName,
           getNewRecordNamespace(valueType, recordNamespace, structName))
@@ -278,6 +292,7 @@ object AvroConversionHelper {
           structType, builder, recordNamespace)
         val fieldConverters = structType.fields.map(field =>
           createConverterToAvro(
+            avroSchema,
             field.dataType,
             field.name,
             getNewRecordNamespace(field.dataType, recordNamespace, field.name)))

@@ -39,7 +39,6 @@ import org.apache.hudi.hive.SchemaDifference;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.parquet.avro.AvroSchemaConverter;
-import org.apache.parquet.schema.DecimalMetadata;
 import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.OriginalType;
@@ -169,9 +168,10 @@ public class SchemaUtil {
           parquetType.asPrimitiveType().getPrimitiveTypeName();
       final OriginalType originalType = parquetType.getOriginalType();
       if (originalType == OriginalType.DECIMAL) {
-        final DecimalMetadata decimalMetadata = parquetType.asPrimitiveType().getDecimalMetadata();
-        return field.append("DECIMAL(").append(decimalMetadata.getPrecision()).append(" , ")
-            .append(decimalMetadata.getScale()).append(")").toString();
+        //TODO HardCoded decimal precision
+        //final DecimalMetadata decimalMetadata = parquetType.asPrimitiveType().getDecimalMetadata();
+        return field.append("DECIMAL(").append(20).append(" , ")
+            .append(2).append(")").toString();
       }
       // TODO - fix the method naming here
       return parquetPrimitiveTypeName.convert(new PrimitiveType.PrimitiveTypeNameConverter<String, RuntimeException>() {
