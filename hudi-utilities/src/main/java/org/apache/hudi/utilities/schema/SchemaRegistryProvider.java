@@ -23,6 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.avro.LogicalTypes;
 import org.apache.avro.Schema;
 import org.apache.hudi.DataSourceUtils;
 import org.apache.hudi.common.util.TypedProperties;
@@ -74,8 +77,33 @@ public class SchemaRegistryProvider extends SchemaProvider {
   }
 
   private static Schema getSchema(String registryUrl) throws IOException {
-    return new Schema.Parser().parse(fetchSchemaFromRegistry(registryUrl));
+    Schema schema = new Schema.Parser().parse(fetchSchemaFromRegistry(registryUrl));
+    List<Schema.Field> fields = schema.getFields().stream().map(field -> tansformDecimalSchema(field)).collect(Collectors.toList());
+    Schema newSchema = Schema.createRecord(schema.getName(),schema.getDoc(),schema.getNamespace(),false,fields);
+    return newSchema;
   }
+
+  public static Schema.Field tansformDecimalSchema(Schema.Field field) {
+    if (field.schema().getLogicalType() != null && field.schema().getLogicalType().getName() == "decimal") {
+      Schema decimalSchema = LogicalTypes.decimal(20,2).addToSchema(Schema.create(Schema.Type.BYTES));
+      Schema.Field decimalField = new Schema.Field(field.name(),decimalSchema,field.doc(),field.defaultVal(),field.order());
+      return decimalField;
+    } else  if (field.schema().getType() == Schema.Type.UNION) {
+      if (field.schema().getTypes().get(1).getLogicalType() != null && field.schema().getTypes().get(1).getLogicalType().getName() == "decimal") {
+        Schema decimalSchema = LogicalTypes.decimal(20,2).addToSchema(Schema.create(Schema.Type.BYTES));
+        Schema unionDecimalSchema = Schema.createUnion(field.schema().getTypes().get(0),decimalSchema);
+        Schema.Field unionField = new Schema.Field(field.name(),unionDecimalSchema,field.doc(),field.defaultVal(),field.order());
+        return unionField;
+      } else {
+        Schema.Field newField = new Schema.Field(field.name(),field.schema(),field.doc(),field.defaultVal(),field.order());
+        return newField;
+      }
+    } else {
+      Schema.Field newField = new Schema.Field(field.name(),field.schema(),field.doc(),field.defaultVal(),field.order());
+      return newField;
+    }
+  }
+
 
   @Override
   public Schema getSourceSchema() {
