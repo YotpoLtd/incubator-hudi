@@ -21,7 +21,6 @@ package org.apache.hudi.cli.commands;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,9 +88,8 @@ public class CompactionCommand implements CommandMarker {
     HoodieTimeline commitTimeline = activeTimeline.getCommitTimeline().filterCompletedInstants();
     Set<String> committed = commitTimeline.getInstants().map(HoodieInstant::getTimestamp).collect(Collectors.toSet());
 
-    List<HoodieInstant> instants = timeline.getInstants().collect(Collectors.toList());
+    List<HoodieInstant> instants = timeline.getReverseOrderedInstants().collect(Collectors.toList());
     List<Comparable[]> rows = new ArrayList<>();
-    Collections.reverse(instants);
     for (int i = 0; i < instants.size(); i++) {
       HoodieInstant instant = instants.get(i);
       HoodieCompactionPlan workload = null;
@@ -290,8 +288,7 @@ public class CompactionCommand implements CommandMarker {
         String message = "\n\n\t COMPACTION PLAN " + (valid ? "VALID" : "INVALID") + "\n\n";
         List<Comparable[]> rows = new ArrayList<>();
         res.stream().forEach(r -> {
-          Comparable[] row = new Comparable[]{r.getOperation().getFileId(),
-              r.getOperation().getBaseInstantTime(),
+          Comparable[] row = new Comparable[] {r.getOperation().getFileId(), r.getOperation().getBaseInstantTime(),
               r.getOperation().getDataFileName().isPresent() ? r.getOperation().getDataFileName().get() : "",
               r.getOperation().getDeltaFileNames().size(), r.isSuccess(),
               r.getException().isPresent() ? r.getException().get().getMessage() : ""};
