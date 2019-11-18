@@ -74,7 +74,6 @@
                   <include>org.apache.parquet:parquet-hadoop</include>
                   <include>org.apache.parquet:parquet-jackson</include>
                   <include>org.apache.parquet:parquet-format</include>
-                  <include>org.xerial.snappy:snappy-java</include>
 
                   <include>com.esotericsoftware:kryo-shaded</include>
                   <include>org.objenesis:objenesis</include>
@@ -98,6 +97,10 @@
                 <relocation>
                   <pattern>org.apache.avro.</pattern>
                   <shadedPattern>${mr.bundle.avro.shade.prefix}org.apache.avro.</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.parquet.</pattern>
+                  <shadedPattern>${mr.bundle.parquet.shade.prefix}org.apache.parquet.</shadedPattern>
                 </relocation>
               </relocations>
               <createDependencyReducedPom>false</createDependencyReducedPom>

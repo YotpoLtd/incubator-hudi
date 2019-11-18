@@ -102,12 +102,27 @@
     <skipUTs>${skipTests}</skipUTs>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <main.basedir>${project.basedir}</main.basedir>
-    <mr.bundle.avro.scope>provided</mr.bundle.avro.scope>
-    <mr.bundle.avro.shade.prefix></mr.bundle.avro.shade.prefix>
-    <spark.bundle.hive.scope>provided</spark.bundle.hive.scope>
+
+    <mr.bundle.avro.scope>compile</mr.bundle.avro.scope>
+    <mr.bundle.avro.shade.prefix>org.apache.hudi.</mr.bundle.avro.shade.prefix>
+
+    <mr.bundle.parquet.scope>compile</mr.bundle.parquet.scope>
+    <mr.bundle.parquet.shade.prefix>org.apache.hudi.</mr.bundle.parquet.shade.prefix>
+
+
+    <spark.bundle.hive.scope>compile</spark.bundle.hive.scope>
     <spark.bundle.hive.shade.prefix></spark.bundle.hive.shade.prefix>
-    <utilities.bundle.hive.scope>provided</utilities.bundle.hive.scope>
+
+    <utilities.bundle.hive.scope>compile</utilities.bundle.hive.scope>
     <utilities.bundle.hive.shade.prefix></utilities.bundle.hive.shade.prefix>
+
+    <utilities.bundle.parquet.shade.prefix>org.apache.hudi.</utilities.bundle.parquet.shade.prefix>
+    <utilities.bundle.parquet.scope>compile</utilities.bundle.parquet.scope>
+
+    <spark.bundle.parquet.scope>compile</spark.bundle.parquet.scope>
+    <spark.bundle.parquet.shade.prefix>org.apache.hudi.</spark.bundle.parquet.shade.prefix>
+
+
   </properties>
 
   <scm>
@@ -463,7 +478,7 @@
         <groupId>org.apache.parquet</groupId>
         <artifactId>parquet-avro</artifactId>
         <version>${parquet.version}</version>
-        <scope>provided</scope>
+        <scope>compile</scope>
       </dependency>
 
       <!-- Spark -->
@@ -481,11 +496,6 @@
       </dependency>
 
       <!-- Spark (Packages) -->
-      <!--<dependency>
-        <groupId>com.databricks</groupId>
-        <artifactId>spark-avro_2.11</artifactId>
-        <version>4.0.0</version>
-      </dependency>-->
 
       <!-- Dropwizard Metrics -->
       <dependency>
