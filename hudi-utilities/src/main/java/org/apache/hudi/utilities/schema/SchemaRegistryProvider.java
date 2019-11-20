@@ -104,7 +104,6 @@ public class SchemaRegistryProvider extends SchemaProvider {
     }
   }
 
-
   @Override
   public Schema getSourceSchema() {
     return schema;
