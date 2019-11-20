@@ -161,7 +161,7 @@ public class HoodieHiveClient {
     alterSQL.append(syncConfig.databaseName).append(".").append(syncConfig.tableName).append(" ADD IF NOT EXISTS ");
     for (String partition : partitions) {
       String partitionClause = getPartitionClause(partition);
-      String fullPartitionPath = FSUtils.getPartitionPath(syncConfig.basePath, partition).toString();
+      String fullPartitionPath = FSUtils.getURIPath(fs,FSUtils.getPartitionPath(syncConfig.basePath, partition));
       alterSQL.append("  PARTITION (").append(partitionClause).append(") LOCATION '").append(fullPartitionPath)
           .append("' ");
     }
@@ -194,7 +194,7 @@ public class HoodieHiveClient {
     String alterTable = "ALTER TABLE " + syncConfig.tableName;
     for (String partition : partitions) {
       String partitionClause = getPartitionClause(partition);
-      String fullPartitionPath = FSUtils.getPartitionPath(syncConfig.basePath, partition).toString();
+      String fullPartitionPath = FSUtils.getURIPath(fs,FSUtils.getPartitionPath(syncConfig.basePath, partition));
       String changePartition =
           alterTable + " PARTITION (" + partitionClause + ") SET LOCATION '" + fullPartitionPath + "'";
       changePartitions.add(changePartition);

@@ -530,6 +530,10 @@ public class FSUtils {
     return ((partitionPath == null) || (partitionPath.isEmpty())) ? basePath : new Path(basePath, partitionPath);
   }
 
+  public static String getURIPath(FileSystem fs, Path path) {
+    return fs.getUri() + path.toUri().getRawPath();
+  }
+
   /**
    * This is due to HUDI-140 GCS has a different behavior for detecting EOF during seek().
    * 
