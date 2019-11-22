@@ -530,7 +530,7 @@ public class FSUtils {
     return ((partitionPath == null) || (partitionPath.isEmpty())) ? basePath : new Path(basePath, partitionPath);
   }
 
-  public static String getURIPath(FileSystem fs, Path path) {
+  public static String getHDFSFullPartitionPath(FileSystem fs, Path path) {
     return fs.getUri() + path.toUri().getRawPath();
   }
 
