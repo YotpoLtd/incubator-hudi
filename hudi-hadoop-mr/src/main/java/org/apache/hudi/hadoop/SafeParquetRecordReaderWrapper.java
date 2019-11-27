@@ -41,14 +41,12 @@ public class SafeParquetRecordReaderWrapper implements RecordReader<Void, ArrayW
   // Number of fields in Value Schema
   private final int numValueFields;
 
-
   public SafeParquetRecordReaderWrapper(RecordReader<Void, ArrayWritable> parquetReader) {
     this.parquetReader = parquetReader;
     ArrayWritable arrayWritable = parquetReader.createValue();
     this.valueClass = arrayWritable.getValueClass();
     this.numValueFields = arrayWritable.get().length;
   }
-
 
   @Override
   public boolean next(Void key, ArrayWritable value) throws IOException {

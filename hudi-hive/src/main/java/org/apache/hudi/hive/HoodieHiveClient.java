@@ -161,7 +161,9 @@ public class HoodieHiveClient {
     alterSQL.append(syncConfig.databaseName).append(".").append(syncConfig.tableName).append(" ADD IF NOT EXISTS ");
     for (String partition : partitions) {
       String partitionClause = getPartitionClause(partition);
-      String fullPartitionPath = FSUtils.getPartitionPath(syncConfig.basePath, partition).toString();
+      Path partitionPath = FSUtils.getPartitionPath(syncConfig.basePath, partition);
+      String fullPartitionPath = !partitionPath.toUri().getScheme().equals("hdfs") ? partitionPath.toString()
+              : FSUtils.getHDFSFullPartitionPath(fs, partitionPath);
       alterSQL.append("  PARTITION (").append(partitionClause).append(") LOCATION '").append(fullPartitionPath)
           .append("' ");
     }
@@ -194,7 +196,9 @@ public class HoodieHiveClient {
     String alterTable = "ALTER TABLE " + syncConfig.tableName;
     for (String partition : partitions) {
       String partitionClause = getPartitionClause(partition);
-      String fullPartitionPath = FSUtils.getPartitionPath(syncConfig.basePath, partition).toString();
+      Path partitionPath = FSUtils.getPartitionPath(syncConfig.basePath, partition);
+      String fullPartitionPath = !partitionPath.toUri().getScheme().equals("hdfs") ? partitionPath.toString()
+              : FSUtils.getHDFSFullPartitionPath(fs, partitionPath);
       String changePartition =
           alterTable + " PARTITION (" + partitionClause + ") SET LOCATION '" + fullPartitionPath + "'";
       changePartitions.add(changePartition);
@@ -218,7 +222,8 @@ public class HoodieHiveClient {
 
     List<PartitionEvent> events = Lists.newArrayList();
     for (String storagePartition : partitionStoragePartitions) {
-      String fullStoragePartitionPath = FSUtils.getPartitionPath(syncConfig.basePath, storagePartition).toString();
+      Path storagePartitionPath = FSUtils.getPartitionPath(syncConfig.basePath, storagePartition);
+      String fullStoragePartitionPath = Path.getPathWithoutSchemeAndAuthority(storagePartitionPath).toUri().getPath();
       // Check if the partition values or if hdfs path is the same
       List<String> storagePartitionValues = partitionValueExtractor.extractPartitionValuesInPath(storagePartition);
       Collections.sort(storagePartitionValues);
