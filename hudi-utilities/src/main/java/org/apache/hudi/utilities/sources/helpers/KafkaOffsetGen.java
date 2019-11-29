@@ -50,7 +50,7 @@ public class KafkaOffsetGen {
 
   private static volatile Logger log = LogManager.getLogger(KafkaOffsetGen.class);
 
-  private static long DEFAULT_MAX_EVENTS_TO_READ = 1000000; // 1M events max
+  private static long DEFAULT_MAX_EVENTS_TO_READ = Long.MAX_VALUE; // 1M events max
 
   public static class CheckpointUtils {
 

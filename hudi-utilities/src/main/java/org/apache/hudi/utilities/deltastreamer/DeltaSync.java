@@ -271,9 +271,10 @@ public class DeltaSync implements Serializable {
     if (transformer != null) {
       // Transformation is needed. Fetch New rows in Row Format, apply transformation and then convert them
       // to generic records for writing
+      log.info("fetchNewDataInRowFormat called");
       InputBatch<Dataset<Row>> dataAndCheckpoint =
           formatAdapter.fetchNewDataInRowFormat(resumeCheckpointStr, cfg.sourceLimit);
-
+      log.info("AvroConversionUtils.createRdd called");
       Option<Dataset<Row>> transformed =
           dataAndCheckpoint.getBatch().map(data -> transformer.apply(jssc, sparkSession, data, props));
       checkpointStr = dataAndCheckpoint.getCheckpointForNextBatch();
@@ -289,6 +290,7 @@ public class DeltaSync implements Serializable {
           : this.schemaProvider;
     } else {
       // Pull the data from the source & prepare the write
+      log.info("fetchNewDataInAvroFormat called");
       InputBatch<JavaRDD<GenericRecord>> dataAndCheckpoint =
           formatAdapter.fetchNewDataInAvroFormat(resumeCheckpointStr, cfg.sourceLimit);
       avroRDDOptional = dataAndCheckpoint.getBatch();

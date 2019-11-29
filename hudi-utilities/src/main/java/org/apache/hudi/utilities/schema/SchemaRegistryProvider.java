@@ -83,14 +83,15 @@ public class SchemaRegistryProvider extends SchemaProvider {
     return newSchema;
   }
 
+  // TODO Decimal Type Hard Code
   public static Schema.Field tansformDecimalSchema(Schema.Field field) {
     if (field.schema().getLogicalType() != null && field.schema().getLogicalType().getName() == "decimal") {
-      Schema decimalSchema = LogicalTypes.decimal(20,2).addToSchema(Schema.create(Schema.Type.BYTES));
+      Schema decimalSchema = LogicalTypes.decimal(30,4).addToSchema(Schema.create(Schema.Type.BYTES));
       Schema.Field decimalField = new Schema.Field(field.name(),decimalSchema,field.doc(),field.defaultVal(),field.order());
       return decimalField;
     } else  if (field.schema().getType() == Schema.Type.UNION) {
       if (field.schema().getTypes().get(1).getLogicalType() != null && field.schema().getTypes().get(1).getLogicalType().getName() == "decimal") {
-        Schema decimalSchema = LogicalTypes.decimal(20,2).addToSchema(Schema.create(Schema.Type.BYTES));
+        Schema decimalSchema = LogicalTypes.decimal(30,4).addToSchema(Schema.create(Schema.Type.BYTES));
         Schema unionDecimalSchema = Schema.createUnion(field.schema().getTypes().get(0),decimalSchema);
         Schema.Field unionField = new Schema.Field(field.name(),unionDecimalSchema,field.doc(),field.defaultVal(),field.order());
         return unionField;

@@ -32,6 +32,8 @@ import org.apache.hudi.utilities.sources.ParquetSource;
 import org.apache.hudi.utilities.sources.RowSource;
 import org.apache.hudi.utilities.sources.Source;
 import org.apache.hudi.utilities.sources.helpers.AvroConvertor;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -41,7 +43,7 @@ import org.apache.spark.sql.types.StructType;
  * Adapts data-format provided by the source to the data-format required by the client (DeltaStreamer)
  */
 public final class SourceFormatAdapter {
-
+  protected static volatile Logger log = LogManager.getLogger(SourceFormatAdapter.class);
   private final Source source;
 
   public SourceFormatAdapter(Source source) {
@@ -56,18 +58,25 @@ public final class SourceFormatAdapter {
    * @return
    */
   public InputBatch<JavaRDD<GenericRecord>> fetchNewDataInAvroFormat(Option<String> lastCkptStr, long sourceLimit) {
+    log.info("fetchNewDataInAvroFormat");
     switch (source.getSourceType()) {
-      case AVRO:
+      case AVRO: {
+        log.info("fetchNewDataInAvroFormat: AVRO");
         return ((AvroSource) source).fetchNext(lastCkptStr, sourceLimit);
-      case PARQUET:
+      }
+      case PARQUET: {
+        log.info("fetchNewDataInAvroFormat: PARQUET");
         return ((ParquetSource) source).fetchNext(lastCkptStr, sourceLimit);
+      }
       case JSON: {
+        log.info("fetchNewDataInAvroFormat: JSON");
         InputBatch<JavaRDD<String>> r = ((JsonSource) source).fetchNext(lastCkptStr, sourceLimit);
         AvroConvertor convertor = new AvroConvertor(r.getSchemaProvider().getSourceSchema());
         return new InputBatch<>(Option.ofNullable(r.getBatch().map(rdd -> rdd.map(convertor::fromJson)).orElse(null)),
             r.getCheckpointForNextBatch(), r.getSchemaProvider());
       }
       case ROW: {
+        log.info("fetchNewDataInAvroFormat: ROW");
         InputBatch<Dataset<Row>> r = ((RowSource) source).fetchNext(lastCkptStr, sourceLimit);
         return new InputBatch<>(Option.ofNullable(r.getBatch().map(
             rdd -> (AvroConversionUtils.createRdd(rdd, HOODIE_RECORD_STRUCT_NAME, HOODIE_RECORD_NAMESPACE).toJavaRDD()))
@@ -86,6 +95,7 @@ public final class SourceFormatAdapter {
    * @return
    */
   public InputBatch<Dataset<Row>> fetchNewDataInRowFormat(Option<String> lastCkptStr, long sourceLimit) {
+    log.info("fetchNewDataInRowFormat");
     switch (source.getSourceType()) {
       case ROW:
         return ((RowSource) source).fetchNext(lastCkptStr, sourceLimit);

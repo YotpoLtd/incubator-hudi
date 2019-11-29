@@ -234,13 +234,13 @@ object AvroConversionHelper {
         if (item == null) null else item.asInstanceOf[Byte].intValue
       case ShortType => (item: Any) =>
         if (item == null) null else item.asInstanceOf[Short].intValue
-
-      case dec: DecimalType => (item: Any) =>
+      // TODO Decimal Type Hard Code
+      case _: DecimalType => (item: Any) =>
         Option(item).map { i =>
           val bigDecimalValue = i.asInstanceOf[java.math.BigDecimal]
           val decimalConversions = new DecimalConversion()
           decimalConversions.toFixed(bigDecimalValue, avroSchema.getField(structName).schema().getTypes.get(0),
-            LogicalTypes.decimal(20, 2))
+            LogicalTypes.decimal(30, 4))
         }.orNull
       case TimestampType => (item: Any) =>
         //if (item == null) null else item.asInstanceOf[Timestamp].getTime

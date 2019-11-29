@@ -167,11 +167,14 @@ public class SchemaUtil {
           parquetType.asPrimitiveType().getPrimitiveTypeName();
       final OriginalType originalType = parquetType.getOriginalType();
       if (originalType == OriginalType.DECIMAL) {
-        //TODO HardCoded decimal precision
-        //final DecimalMetadata decimalMetadata = parquetType.asPrimitiveType().getDecimalMetadata();
-        return field.append("DECIMAL(").append(20).append(" , ")
-            .append(2).append(")").toString();
+        // TODO Decimal Type Hard Code
+        final DecimalMetadata decimalMetadata = parquetType.asPrimitiveType().getDecimalMetadata();
+
+        return field.append("DECIMAL(").append(decimalMetadata.getPrecision()).append(" , ")
+            .append(decimalMetadata.getScale()).append(")").toString();
       }
+
+
       // TODO - fix the method naming here
       return parquetPrimitiveTypeName.convert(new PrimitiveType.PrimitiveTypeNameConverter<String, RuntimeException>() {
         @Override

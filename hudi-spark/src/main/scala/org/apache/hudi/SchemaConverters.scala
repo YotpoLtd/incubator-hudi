@@ -55,6 +55,7 @@ object SchemaConverters {
       case BYTES | FIXED => avroSchema.getLogicalType match {
         // For FIXED type, if the precision requires more bytes than fixed size, the logical
         // type will be null, which is handled by Avro library.
+        // TODO Decimal Type Hard Code
         case d: Decimal => SchemaType(DecimalType(d.getPrecision, d.getScale), nullable = false)
         case _ => SchemaType(BinaryType, nullable = false)
       }
@@ -150,7 +151,8 @@ object SchemaConverters {
       case DoubleType => builder.doubleType()
       case StringType => builder.stringType()
       case d: DecimalType =>
-        val avroType = LogicalTypes.decimal(20, 4)
+        // TODO Decimal Type Hard Code
+        val avroType = LogicalTypes.decimal(30, 4)
         val fixedSize = minBytesForPrecision(d.precision)
         // Need to avoid naming conflict for the fixed fields
         val name = nameSpace match {
@@ -198,7 +200,7 @@ object SchemaConverters {
   }
 
 
-  lazy val minBytesForPrecision = Array.tabulate[Int](39)(computeMinBytesForPrecision)
+  lazy val minBytesForPrecision = Array.tabulate[Int](64)(computeMinBytesForPrecision)
 
   private def computeMinBytesForPrecision(precision : Int) : Int = {
     var numBytes = 1
