@@ -355,7 +355,9 @@ public class DeltaSync implements Serializable {
     }
 
     long totalErrorRecords = writeStatusRDD.mapToDouble(ws -> ws.getTotalErrorRecords()).sum().longValue();
+    log.info("totalErrorRecords  : " + totalErrorRecords);
     long totalRecords = writeStatusRDD.mapToDouble(ws -> ws.getTotalRecords()).sum().longValue();
+    log.info("totalRecords  : " + totalRecords);
     boolean hasErrors = totalErrorRecords > 0;
     long hiveSyncTimeMs = 0;
     if (!hasErrors || cfg.commitOnErrors) {
