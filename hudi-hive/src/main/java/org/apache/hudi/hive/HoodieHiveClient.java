@@ -51,6 +51,7 @@ import org.apache.hudi.common.model.HoodieCommitMetadata;
 import org.apache.hudi.common.model.HoodieFileFormat;
 import org.apache.hudi.common.model.HoodieLogFile;
 import org.apache.hudi.common.model.HoodieTableType;
+import org.apache.hudi.common.storage.StorageSchemes;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
 import org.apache.hudi.common.table.HoodieTimeline;
 import org.apache.hudi.common.table.timeline.HoodieInstant;
@@ -172,7 +173,7 @@ public class HoodieHiveClient {
 
   /**
    * Generate Hive Partition from partition values
-   * 
+   *
    * @param partition Partition path
    * @return
    */
@@ -197,8 +198,10 @@ public class HoodieHiveClient {
     for (String partition : partitions) {
       String partitionClause = getPartitionClause(partition);
       Path partitionPath = FSUtils.getPartitionPath(syncConfig.basePath, partition);
-      String fullPartitionPath = !partitionPath.toUri().getScheme().equals("hdfs") ? partitionPath.toString()
-              : FSUtils.getHDFSFullPartitionPath(fs, partitionPath);
+
+      String fullPartitionPath = partitionPath.toUri().getScheme().equals(StorageSchemes.HDFS.getScheme())
+              ? FSUtils.getDFSFullPartitionPath(fs, partitionPath) : partitionPath.toString();
+
       String changePartition =
           alterTable + " PARTITION (" + partitionClause + ") SET LOCATION '" + fullPartitionPath + "'";
       changePartitions.add(changePartition);

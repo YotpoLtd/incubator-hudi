@@ -18,6 +18,16 @@
 
 package org.apache.hudi.common.util.collection;
 
+import org.apache.hudi.common.util.SerializationUtils;
+import org.apache.hudi.common.util.SpillableMapUtils;
+import org.apache.hudi.common.util.collection.io.storage.SizeAwareDataOutputStream;
+import org.apache.hudi.exception.HoodieException;
+import org.apache.hudi.exception.HoodieIOException;
+import org.apache.hudi.exception.HoodieNotSupportedException;
+
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -26,7 +36,6 @@ import java.io.Serializable;
 import java.net.InetAddress;
 import java.util.AbstractMap;
 import java.util.Collection;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -37,14 +46,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
-import org.apache.hudi.common.util.SerializationUtils;
-import org.apache.hudi.common.util.SpillableMapUtils;
-import org.apache.hudi.common.util.collection.io.storage.SizeAwareDataOutputStream;
-import org.apache.hudi.exception.HoodieException;
-import org.apache.hudi.exception.HoodieIOException;
-import org.apache.hudi.exception.HoodieNotSupportedException;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 
 /**
  * This class provides a disk spillable only map implementation. All of the data is currenly written to one file,
@@ -213,7 +214,7 @@ public final class DiskBasedMap<T extends Serializable, R extends Serializable> 
     try {
       byte[] val = SerializationUtils.serialize(value);
       Integer valueSize = val.length;
-      Long timestamp = new Date().getTime();
+      Long timestamp = System.currentTimeMillis();
       this.valueMetadataMap.put(key,
           new DiskBasedMap.ValueMetadata(this.filePath, valueSize, filePosition.get(), timestamp));
       byte[] serializedKey = SerializationUtils.serialize(key);
