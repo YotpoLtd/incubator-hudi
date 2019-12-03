@@ -108,10 +108,10 @@
                   <pattern>com.beust.jcommander.</pattern>
                   <shadedPattern>org.apache.hudi.com.beust.jcommander.</shadedPattern>
                 </relocation>
-                <relocation>
+                <!--<relocation>
                   <pattern>org.apache.avro</pattern>
                   <shadedPattern>com.apache.hudi.org.apache.avro</shadedPattern>
-                </relocation>
+                </relocation>-->
                 <relocation>
                   <pattern>org.apache.parquet</pattern>
                   <shadedPattern>${spark.bundle.parquet.shade.prefix}org.apache.parquet</shadedPattern>
