@@ -52,7 +52,7 @@ public class AvroKafkaSource extends AvroSource {
 
   @Override
   protected InputBatch<JavaRDD<GenericRecord>> fetchNewData(Option<String> lastCheckpointStr, long sourceLimit) {
-    log.info("fetchNewData called");
+    LOG.info("fetchNewData called");
     OffsetRange[] offsetRanges = offsetGen.getNextOffsetRanges(lastCheckpointStr, sourceLimit);
     long totalNewMsgs = CheckpointUtils.totalNewMessages(offsetRanges);
     if (totalNewMsgs <= 0) {
@@ -65,7 +65,7 @@ public class AvroKafkaSource extends AvroSource {
   }
 
   private JavaRDD<GenericRecord> toRDD(OffsetRange[] offsetRanges) {
-    log.info("toRDD called");
+    LOG.info("toRDD called");
     JavaRDD<GenericRecord> recordRDD =
         KafkaUtils.createRDD(sparkContext, String.class, Object.class, StringDecoder.class, KafkaAvroDecoder.class,
             offsetGen.getKafkaParams(), offsetRanges).values().map(obj -> (GenericRecord) obj);
