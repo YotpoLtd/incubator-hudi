@@ -52,7 +52,7 @@ import java.util.stream.Collectors;
 @SuppressWarnings("WeakerAccess")
 public class HiveSyncTool {
 
-  private static Logger LOG = LogManager.getLogger(HiveSyncTool.class);
+  private static final Logger LOG = LogManager.getLogger(HiveSyncTool.class);
   private final HoodieHiveClient hoodieHiveClient;
   public static final String SUFFIX_REALTIME_TABLE = "_rt";
   private final HiveSyncConfig cfg;
@@ -160,7 +160,7 @@ public class HiveSyncTool {
 
   /**
    * Syncs the list of storage parititions passed in (checks if the partition is in hive, if not adds it or if the
-   * partition path does not match, it updates the partition path)
+   * partition path does not match, it updates the partition path).
    */
   private void syncPartitions(List<String> writtenPartitionsSince) {
     try {

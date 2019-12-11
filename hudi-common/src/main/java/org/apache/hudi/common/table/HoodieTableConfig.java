@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
  */
 public class HoodieTableConfig implements Serializable {
 
-  private static final transient Logger log = LogManager.getLogger(HoodieTableConfig.class);
+  private static final Logger LOG = LogManager.getLogger(HoodieTableConfig.class);
 
   public static final String HOODIE_PROPERTIES_FILE = "hoodie.properties";
   public static final String HOODIE_TABLE_NAME_PROP_NAME = "hoodie.table.name";
@@ -67,7 +67,7 @@ public class HoodieTableConfig implements Serializable {
   public HoodieTableConfig(FileSystem fs, String metaPath) {
     Properties props = new Properties();
     Path propertyPath = new Path(metaPath, HOODIE_PROPERTIES_FILE);
-    log.info("Loading dataset properties from " + propertyPath);
+    LOG.info("Loading dataset properties from " + propertyPath);
     try {
       try (FSDataInputStream inputStream = fs.open(propertyPath)) {
         props.load(inputStream);
@@ -83,14 +83,14 @@ public class HoodieTableConfig implements Serializable {
   }
 
   /**
-   * For serailizing and de-serializing
+   * For serailizing and de-serializing.
    *
    * @deprecated
    */
   public HoodieTableConfig() {}
 
   /**
-   * Initialize the hoodie meta directory and any necessary files inside the meta (including the hoodie.properties)
+   * Initialize the hoodie meta directory and any necessary files inside the meta (including the hoodie.properties).
    */
   public static void createHoodieProperties(FileSystem fs, Path metadataFolder, Properties properties)
       throws IOException {
@@ -117,7 +117,7 @@ public class HoodieTableConfig implements Serializable {
   }
 
   /**
-   * Read the table type from the table properties and if not found, return the default
+   * Read the table type from the table properties and if not found, return the default.
    */
   public HoodieTableType getTableType() {
     if (props.containsKey(HOODIE_TABLE_TYPE_PROP_NAME)) {
@@ -127,7 +127,7 @@ public class HoodieTableConfig implements Serializable {
   }
 
   /**
-   * Read the payload class for HoodieRecords from the table properties
+   * Read the payload class for HoodieRecords from the table properties.
    */
   public String getPayloadClass() {
     // There could be datasets written with payload class from com.uber.hoodie. Need to transparently
@@ -137,14 +137,14 @@ public class HoodieTableConfig implements Serializable {
   }
 
   /**
-   * Read the table name
+   * Read the table name.
    */
   public String getTableName() {
     return props.getProperty(HOODIE_TABLE_NAME_PROP_NAME);
   }
 
   /**
-   * Get the Read Optimized Storage Format
+   * Get the Read Optimized Storage Format.
    *
    * @return HoodieFileFormat for the Read Optimized Storage format
    */
@@ -156,7 +156,7 @@ public class HoodieTableConfig implements Serializable {
   }
 
   /**
-   * Get the Read Optimized Storage Format
+   * Get the Read Optimized Storage Format.
    *
    * @return HoodieFileFormat for the Read Optimized Storage format
    */
@@ -168,7 +168,7 @@ public class HoodieTableConfig implements Serializable {
   }
 
   /**
-   * Get the relative path of archive log folder under metafolder, for this dataset
+   * Get the relative path of archive log folder under metafolder, for this dataset.
    */
   public String getArchivelogFolder() {
     return props.getProperty(HOODIE_ARCHIVELOG_FOLDER_PROP_NAME, DEFAULT_ARCHIVELOG_FOLDER);

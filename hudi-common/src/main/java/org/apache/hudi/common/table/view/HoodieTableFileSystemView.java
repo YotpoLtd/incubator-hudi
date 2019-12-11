@@ -48,18 +48,18 @@ import java.util.stream.Stream;
  */
 public class HoodieTableFileSystemView extends IncrementalTimelineSyncFileSystemView {
 
-  private static Logger log = LogManager.getLogger(HoodieTableFileSystemView.class);
+  private static final Logger LOG = LogManager.getLogger(HoodieTableFileSystemView.class);
 
   // mapping from partition paths to file groups contained within them
   protected Map<String, List<HoodieFileGroup>> partitionToFileGroupsMap;
 
   /**
-   * PartitionPath + File-Id to pending compaction instant time
+   * PartitionPath + File-Id to pending compaction instant time.
    */
   protected Map<HoodieFileGroupId, Pair<String, CompactionOperation>> fgIdToPendingCompaction;
 
   /**
-   * Flag to determine if closed
+   * Flag to determine if closed.
    */
   private boolean closed = false;
 
@@ -68,14 +68,14 @@ public class HoodieTableFileSystemView extends IncrementalTimelineSyncFileSystem
   }
 
   /**
-   * Create a file system view, as of the given timeline
+   * Create a file system view, as of the given timeline.
    */
   public HoodieTableFileSystemView(HoodieTableMetaClient metaClient, HoodieTimeline visibleActiveTimeline) {
     this(metaClient, visibleActiveTimeline, false);
   }
 
   /**
-   * Create a file system view, as of the given timeline
+   * Create a file system view, as of the given timeline.
    */
   public HoodieTableFileSystemView(HoodieTableMetaClient metaClient, HoodieTimeline visibleActiveTimeline,
       boolean enableIncrementalTimelineSync) {
@@ -193,7 +193,7 @@ public class HoodieTableFileSystemView extends IncrementalTimelineSyncFileSystem
 
   @Override
   protected void storePartitionView(String partitionPath, List<HoodieFileGroup> fileGroups) {
-    log.info("Adding file-groups for partition :" + partitionPath + ", #FileGroups=" + fileGroups.size());
+    LOG.info("Adding file-groups for partition :" + partitionPath + ", #FileGroups=" + fileGroups.size());
     List<HoodieFileGroup> newList = new ArrayList<>(fileGroups);
     partitionToFileGroupsMap.put(partitionPath, newList);
   }

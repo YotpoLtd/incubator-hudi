@@ -31,6 +31,7 @@ import org.apache.hudi.utilities.HDFSParquetImporter.Config;
 import org.apache.hudi.utilities.HoodieCompactionAdminTool;
 import org.apache.hudi.utilities.HoodieCompactionAdminTool.Operation;
 import org.apache.hudi.utilities.HoodieCompactor;
+
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SQLContext;
@@ -40,7 +41,7 @@ import org.apache.spark.sql.SQLContext;
  */
 public class SparkMain {
 
-  protected static final Logger LOG = Logger.getLogger(SparkMain.class);
+  private static final Logger LOG = Logger.getLogger(SparkMain.class);
 
   /**
    * Commands.

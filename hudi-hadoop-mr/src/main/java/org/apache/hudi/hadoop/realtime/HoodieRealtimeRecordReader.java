@@ -38,6 +38,7 @@ public class HoodieRealtimeRecordReader implements RecordReader<Void, ArrayWrita
   public static final String REALTIME_SKIP_MERGE_PROP = "hoodie.realtime.merge.skip";
   // By default, we do merged-reading
   public static final String DEFAULT_REALTIME_SKIP_MERGE = "false";
+
   private static final transient Logger LOG = LogManager.getLogger(HoodieRealtimeRecordReader.class);
   private final RecordReader<Void, ArrayWritable> reader;
 
@@ -51,7 +52,7 @@ public class HoodieRealtimeRecordReader implements RecordReader<Void, ArrayWrita
   }
 
   /**
-   * Construct record reader based on job configuration
+   * Construct record reader based on job configuration.
    *
    * @param split File Split
    * @param jobConf Job Configuration

@@ -33,7 +33,7 @@ import java.io.Serializable;
  * Represents a source from which we can tail data. Assumes a constructor that takes properties.
  */
 public abstract class Source<T> implements Serializable {
-  protected static volatile Logger log = LogManager.getLogger(Source.class);
+  private static final Logger LOG = LogManager.getLogger(Source.class);
 
   public enum SourceType {
     JSON, AVRO, ROW, PARQUET
@@ -63,7 +63,7 @@ public abstract class Source<T> implements Serializable {
   protected abstract InputBatch<T> fetchNewData(Option<String> lastCkptStr, long sourceLimit);
 
   /**
-   * Main API called by Hoodie Delta Streamer to fetch records
+   * Main API called by Hoodie Delta Streamer to fetch records.
    * 
    * @param lastCkptStr Last Checkpoint
    * @param sourceLimit Source Limit

@@ -50,11 +50,11 @@ import java.util.stream.Collectors;
  */
 public class HoodieROTablePathFilter implements PathFilter, Serializable {
 
-  private static final transient Logger LOG = LogManager.getLogger(HoodieROTablePathFilter.class);
+  private static final Logger LOG = LogManager.getLogger(HoodieROTablePathFilter.class);
 
   /**
    * Its quite common, to have all files from a given partition path be passed into accept(), cache the check for hoodie
-   * metadata for known partition paths and the latest versions of files
+   * metadata for known partition paths and the latest versions of files.
    */
   private HashMap<String, HashSet<Path>> hoodiePathCache;
 
@@ -72,7 +72,7 @@ public class HoodieROTablePathFilter implements PathFilter, Serializable {
   }
 
   /**
-   * Obtain the path, two levels from provided path
+   * Obtain the path, two levels from provided path.
    *
    * @return said path if available, null otherwise
    */

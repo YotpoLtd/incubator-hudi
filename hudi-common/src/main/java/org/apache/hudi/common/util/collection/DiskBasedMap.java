@@ -54,7 +54,7 @@ import java.util.stream.Stream;
  */
 public final class DiskBasedMap<T extends Serializable, R extends Serializable> implements Map<T, R>, Iterable<R> {
 
-  private static final Logger log = LogManager.getLogger(DiskBasedMap.class);
+  private static final Logger LOG = LogManager.getLogger(DiskBasedMap.class);
   // Stores the key and corresponding value's latest metadata spilled to disk
   private final Map<T, ValueMetadata> valueMetadataMap;
   // Write only file
@@ -111,7 +111,7 @@ public final class DiskBasedMap<T extends Serializable, R extends Serializable> 
       writeOnlyFile.getParentFile().mkdir();
     }
     writeOnlyFile.createNewFile();
-    log.info("Spilling to file location " + writeOnlyFile.getAbsolutePath() + " in host ("
+    LOG.info("Spilling to file location " + writeOnlyFile.getAbsolutePath() + " in host ("
         + InetAddress.getLocalHost().getHostAddress() + ") with hostname (" + InetAddress.getLocalHost().getHostName()
         + ")");
     // Make sure file is deleted when JVM exits
@@ -121,7 +121,7 @@ public final class DiskBasedMap<T extends Serializable, R extends Serializable> 
 
   /**
    * Register shutdown hook to force flush contents of the data written to FileOutputStream from OS page cache
-   * (typically 4 KB) to disk
+   * (typically 4 KB) to disk.
    */
   private void addShutDownHook() {
     Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -153,7 +153,7 @@ public final class DiskBasedMap<T extends Serializable, R extends Serializable> 
   }
 
   /**
-   * Custom iterator to iterate over values written to disk
+   * Custom iterator to iterate over values written to disk.
    */
   @Override
   public Iterator<R> iterator() {
@@ -161,7 +161,7 @@ public final class DiskBasedMap<T extends Serializable, R extends Serializable> 
   }
 
   /**
-   * Number of bytes spilled to disk
+   * Number of bytes spilled to disk.
    */
   public long sizeOfFileOnDiskInBytes() {
     return filePosition.get();
@@ -272,6 +272,9 @@ public final class DiskBasedMap<T extends Serializable, R extends Serializable> 
     return entrySet;
   }
 
+  /**
+   * The file metadata that should be spilled to disk.
+   */
   public static final class FileEntry {
 
     // Checksum of the value written to disk, compared during every readFromDisk to make sure no corruption
@@ -321,6 +324,9 @@ public final class DiskBasedMap<T extends Serializable, R extends Serializable> 
     }
   }
 
+  /**
+   * The value relevant metadata.
+   */
   public static final class ValueMetadata implements Comparable<ValueMetadata> {
 
     // FilePath to store the spilled data

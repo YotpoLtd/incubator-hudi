@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 public class SchemaRegistryProvider extends SchemaProvider {
 
   /**
-   * Configs supported
+   * Configs supported.
    */
   public static class Config {
 

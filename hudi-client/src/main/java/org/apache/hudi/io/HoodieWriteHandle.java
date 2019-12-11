@@ -47,7 +47,7 @@ import java.io.IOException;
  */
 public abstract class HoodieWriteHandle<T extends HoodieRecordPayload> extends HoodieIOHandle {
 
-  private static Logger logger = LogManager.getLogger(HoodieWriteHandle.class);
+  private static final Logger LOG = LogManager.getLogger(HoodieWriteHandle.class);
   protected final Schema originalSchema;
   protected final Schema writerSchema;
   protected HoodieTimer timer;
@@ -90,14 +90,14 @@ public abstract class HoodieWriteHandle<T extends HoodieRecordPayload> extends H
   }
 
   /**
-   * Creates an empty marker file corresponding to storage writer path
+   * Creates an empty marker file corresponding to storage writer path.
    *
    * @param partitionPath Partition path
    */
   protected void createMarkerFile(String partitionPath) {
     Path markerPath = makeNewMarkerPath(partitionPath);
     try {
-      logger.info("Creating Marker Path=" + markerPath);
+      LOG.info("Creating Marker Path=" + markerPath);
       fs.create(markerPath, false).close();
     } catch (IOException e) {
       throw new HoodieException("Failed to create marker file " + markerPath, e);
@@ -105,7 +105,7 @@ public abstract class HoodieWriteHandle<T extends HoodieRecordPayload> extends H
   }
 
   /**
-   * THe marker path will be <base-path>/.hoodie/.temp/<instant_ts>/2019/04/25/filename
+   * THe marker path will be <base-path>/.hoodie/.temp/<instant_ts>/2019/04/25/filename.
    */
   private Path makeNewMarkerPath(String partitionPath) {
     Path markerRootPath = new Path(hoodieTable.getMetaClient().getMarkerFolderPath(instantTime));
@@ -123,7 +123,7 @@ public abstract class HoodieWriteHandle<T extends HoodieRecordPayload> extends H
   }
 
   /**
-   * Determines whether we can accept the incoming records, into the current file, depending on
+   * Determines whether we can accept the incoming records, into the current file. Depending on
    * <p>
    * - Whether it belongs to the same partitionPath as existing records - Whether the current file written bytes lt max
    * file size
@@ -147,14 +147,14 @@ public abstract class HoodieWriteHandle<T extends HoodieRecordPayload> extends H
     if (exception.isPresent() && exception.get() instanceof Throwable) {
       // Not throwing exception from here, since we don't want to fail the entire job for a single record
       writeStatus.markFailure(record, exception.get(), recordMetadata);
-      logger.error("Error writing record " + record, exception.get());
+      LOG.error("Error writing record " + record, exception.get());
     } else {
       write(record, avroRecord);
     }
   }
 
   /**
-   * Rewrite the GenericRecord with the Schema containing the Hoodie Metadata fields
+   * Rewrite the GenericRecord with the Schema containing the Hoodie Metadata fields.
    */
   protected GenericRecord rewriteRecord(GenericRecord record) {
     return HoodieAvroUtils.rewriteRecord(record, writerSchema);

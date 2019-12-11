@@ -50,14 +50,15 @@ import java.util.stream.Collectors;
 
 
 /**
- * Schema Utilities
+ * Schema Utilities.
  */
 public class SchemaUtil {
 
   private static final Logger LOG = LogManager.getLogger(SchemaUtil.class);
+  public static final String HIVE_ESCAPE_CHARACTER = "`";
 
   /**
-   * Get the schema difference between the storage schema and hive table schema
+   * Get the schema difference between the storage schema and hive table schema.
    */
   public static SchemaDifference getSchemaDifference(MessageType storageSchema, Map<String, String> tableSchema,
       List<String> partitionKeys) {
@@ -136,7 +137,7 @@ public class SchemaUtil {
   }
 
   /**
-   * Returns equivalent Hive table schema read from a parquet file
+   * Returns equivalent Hive table schema read from a parquet file.
    *
    * @param messageType : Parquet Schema
    * @return : Hive Table schema read from parquet file MAP[String,String]
@@ -159,7 +160,7 @@ public class SchemaUtil {
   }
 
   /**
-   * Convert one field data type of parquet schema into an equivalent Hive schema
+   * Convert one field data type of parquet schema into an equivalent Hive schema.
    *
    * @param parquetType : Single paruet field
    * @return : Equivalent sHive schema
@@ -277,7 +278,7 @@ public class SchemaUtil {
   }
 
   /**
-   * Return a 'struct' Hive schema from a list of Parquet fields
+   * Return a 'struct' Hive schema from a list of Parquet fields.
    *
    * @param parquetFields : list of parquet fields
    * @return : Equivalent 'struct' Hive schema
@@ -329,14 +330,14 @@ public class SchemaUtil {
   }
 
   /**
-   * Create a 'Map' schema from Parquet map field
+   * Create a 'Map' schema from Parquet map field.
    */
   private static String createHiveMap(String keyType, String valueType) {
     return "MAP< " + keyType + ", " + valueType + ">";
   }
 
   /**
-   * Create an Array Hive schema from equivalent parquet list type
+   * Create an Array Hive schema from equivalent parquet list type.
    */
   private static String createHiveArray(Type elementType, String elementName) {
     StringBuilder array = new StringBuilder();
@@ -407,7 +408,8 @@ public class SchemaUtil {
 
     String partitionsStr = partitionFields.stream().collect(Collectors.joining(","));
     StringBuilder sb = new StringBuilder("CREATE EXTERNAL TABLE  IF NOT EXISTS ");
-    sb = sb.append(config.databaseName).append(".").append(config.tableName);
+    sb = sb.append(HIVE_ESCAPE_CHARACTER).append(config.databaseName).append(HIVE_ESCAPE_CHARACTER)
+            .append(".").append(HIVE_ESCAPE_CHARACTER).append(config.tableName).append(HIVE_ESCAPE_CHARACTER);
     sb = sb.append("( ").append(columns).append(")");
     if (!config.partitionFields.isEmpty()) {
       sb = sb.append(" PARTITIONED BY (").append(partitionsStr).append(")");
@@ -430,7 +432,7 @@ public class SchemaUtil {
   }
 
   /**
-   * Read the schema from the log file on path
+   * Read the schema from the log file on path.
    * 
    * @return
    */

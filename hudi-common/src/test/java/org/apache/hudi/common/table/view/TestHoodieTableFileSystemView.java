@@ -65,10 +65,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+/**
+ * Tests hoodie table file system view {@link HoodieTableFileSystemView}.
+ */
 @SuppressWarnings("ResultOfMethodCallIgnored")
 public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
 
-  private static final transient Logger log = LogManager.getLogger(TestHoodieTableFileSystemView.class);
+  private static final Logger LOG = LogManager.getLogger(TestHoodieTableFileSystemView.class);
 
   private static String TEST_WRITE_TOKEN = "1-0-1";
 
@@ -221,7 +224,7 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
   }
 
   /**
-   * Helper method to test Views in the presence of concurrent compaction
+   * Helper method to test Views in the presence of concurrent compaction.
    * 
    * @param skipCreatingDataFile if set, first File Slice will not have data-file set. This would simulate inserts going
    *        directly to log files
@@ -495,7 +498,7 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     roView.getAllDataFiles(partitionPath);
 
     fileSliceList = rtView.getLatestFileSlices(partitionPath).collect(Collectors.toList());
-    log.info("FILESLICE LIST=" + fileSliceList);
+    LOG.info("FILESLICE LIST=" + fileSliceList);
     dataFiles = fileSliceList.stream().map(FileSlice::getDataFile).filter(Option::isPresent).map(Option::get)
         .collect(Collectors.toList());
     assertEquals("Expect only one data-files in latest view as there is only one file-group", 1, dataFiles.size());

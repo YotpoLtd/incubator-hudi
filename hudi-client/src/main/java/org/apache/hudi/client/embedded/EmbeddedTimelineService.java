@@ -33,11 +33,11 @@ import org.apache.spark.SparkConf;
 import java.io.IOException;
 
 /**
- * Timeline Service that runs as part of write client
+ * Timeline Service that runs as part of write client.
  */
 public class EmbeddedTimelineService {
 
-  private static Logger logger = LogManager.getLogger(EmbeddedTimelineService.class);
+  private static final Logger LOG = LogManager.getLogger(EmbeddedTimelineService.class);
 
   private int serverPort;
   private String hostAddr;
@@ -72,21 +72,21 @@ public class EmbeddedTimelineService {
   public void startServer() throws IOException {
     server = new TimelineService(0, viewManager, hadoopConf.newCopy());
     serverPort = server.startService();
-    logger.info("Started embedded timeline server at " + hostAddr + ":" + serverPort);
+    LOG.info("Started embedded timeline server at " + hostAddr + ":" + serverPort);
   }
 
   private void setHostAddrFromSparkConf(SparkConf sparkConf) {
     String hostAddr = sparkConf.get("spark.driver.host", null);
     if (hostAddr != null) {
-      logger.info("Overriding hostIp to (" + hostAddr + ") found in spark-conf. It was " + this.hostAddr);
+      LOG.info("Overriding hostIp to (" + hostAddr + ") found in spark-conf. It was " + this.hostAddr);
       this.hostAddr = hostAddr;
     } else {
-      logger.warn("Unable to find driver bind address from spark config");
+      LOG.warn("Unable to find driver bind address from spark config");
     }
   }
 
   /**
-   * Retrieves proper view storage configs for remote clients to access this service
+   * Retrieves proper view storage configs for remote clients to access this service.
    */
   public FileSystemViewStorageConfig getRemoteFileSystemViewConfig() {
     return FileSystemViewStorageConfig.newBuilder().withStorageType(FileSystemViewStorageType.REMOTE_FIRST)
@@ -99,11 +99,11 @@ public class EmbeddedTimelineService {
 
   public void stop() {
     if (null != server) {
-      logger.info("Closing Timeline server");
+      LOG.info("Closing Timeline server");
       this.server.close();
       this.server = null;
       this.viewManager = null;
-      logger.info("Closed Timeline server");
+      LOG.info("Closed Timeline server");
     }
   }
 }

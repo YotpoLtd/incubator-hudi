@@ -47,7 +47,7 @@ import static java.util.Collections.reverse;
  */
 public class HoodieDefaultTimeline implements HoodieTimeline {
 
-  private static final transient Logger log = LogManager.getLogger(HoodieDefaultTimeline.class);
+  private static final Logger LOG = LogManager.getLogger(HoodieDefaultTimeline.class);
 
   private static final String HASHING_ALGORITHM = "SHA-256";
 
@@ -75,7 +75,7 @@ public class HoodieDefaultTimeline implements HoodieTimeline {
   }
 
   /**
-   * For serailizing and de-serializing
+   * For serializing and de-serializing.
    *
    * @deprecated
    */

@@ -29,20 +29,20 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * Provides Iterator Interface to iterate value entries read from record reader
+ * Provides Iterator Interface to iterate value entries read from record reader.
  *
  * @param <K> Key Type
  * @param <V> Value Type
  */
 public class RecordReaderValueIterator<K, V> implements Iterator<V> {
 
-  private static final transient Logger LOG = LogManager.getLogger(RecordReaderValueIterator.class);
+  private static final Logger LOG = LogManager.getLogger(RecordReaderValueIterator.class);
 
   private final RecordReader<K, V> reader;
   private V nextVal = null;
 
   /**
-   * Construct RecordReaderValueIterator
+   * Construct RecordReaderValueIterator.
    *
    * @param reader reader
    */

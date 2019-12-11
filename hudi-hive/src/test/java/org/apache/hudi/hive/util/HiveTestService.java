@@ -59,12 +59,12 @@ import java.util.concurrent.Executors;
 
 public class HiveTestService {
 
-  private static Logger LOG = LogManager.getLogger(HiveTestService.class);
+  private static final Logger LOG = LogManager.getLogger(HiveTestService.class);
 
   private static final int CONNECTION_TIMEOUT = 30000;
 
   /**
-   * Configuration settings
+   * Configuration settings.
    */
   private Configuration hadoopConf;
   private String workDir;
