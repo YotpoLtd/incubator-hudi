@@ -47,6 +47,8 @@ public class TimestampBasedKeyGenerator extends SimpleKeyGenerator {
 
   private final String outputDateFormat;
 
+  private final String timezone;
+
   /**
    * Supported configs
    */
@@ -58,6 +60,8 @@ public class TimestampBasedKeyGenerator extends SimpleKeyGenerator {
         "hoodie.deltastreamer.keygen" + ".timebased.input" + ".dateformat";
     private static final String TIMESTAMP_OUTPUT_DATE_FORMAT_PROP =
         "hoodie.deltastreamer.keygen" + ".timebased.output" + ".dateformat";
+    private static final String TIMESTAMP_INPUT_TIMEZONE =
+            "hoodie.deltastreamer.keygen" + ".timebased.input" + ".timezone";
   }
 
   public TimestampBasedKeyGenerator(TypedProperties config) {
@@ -66,12 +70,12 @@ public class TimestampBasedKeyGenerator extends SimpleKeyGenerator {
         Arrays.asList(Config.TIMESTAMP_TYPE_FIELD_PROP, Config.TIMESTAMP_OUTPUT_DATE_FORMAT_PROP));
     this.timestampType = TimestampType.valueOf(config.getString(Config.TIMESTAMP_TYPE_FIELD_PROP));
     this.outputDateFormat = config.getString(Config.TIMESTAMP_OUTPUT_DATE_FORMAT_PROP);
-
+    this.timezone = config.getString(Config.TIMESTAMP_INPUT_TIMEZONE);
     if (timestampType == TimestampType.DATE_STRING || timestampType == TimestampType.MIXED) {
       DataSourceUtils.checkRequiredProperties(config,
           Collections.singletonList(Config.TIMESTAMP_INPUT_DATE_FORMAT_PROP));
       this.inputDateFormat = new SimpleDateFormat(config.getString(Config.TIMESTAMP_INPUT_DATE_FORMAT_PROP));
-      this.inputDateFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+      this.inputDateFormat.setTimeZone(TimeZone.getTimeZone(this.timezone));
     }
   }
 
@@ -79,7 +83,7 @@ public class TimestampBasedKeyGenerator extends SimpleKeyGenerator {
   public HoodieKey getKey(GenericRecord record) {
     Object partitionVal = DataSourceUtils.getNestedFieldVal(record, partitionPathField);
     SimpleDateFormat partitionPathFormat = new SimpleDateFormat(outputDateFormat);
-    partitionPathFormat.setTimeZone(TimeZone.getTimeZone("GMT"));
+    partitionPathFormat.setTimeZone(TimeZone.getTimeZone(timezone));
 
     try {
       long unixTime;
