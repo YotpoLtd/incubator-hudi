@@ -179,9 +179,10 @@ public class CompactionAdminClient extends AbstractHoodieClient {
         // revert if in inflight state
         metaClient.getActiveTimeline().revertCompactionInflightToRequested(inflight);
       }
+      // Overwrite compaction plan with updated info
       metaClient.getActiveTimeline().saveToCompactionRequested(
           new HoodieInstant(State.REQUESTED, COMPACTION_ACTION, compactionOperationWithInstant.getLeft()),
-          AvroUtils.serializeCompactionPlan(newPlan));
+          AvroUtils.serializeCompactionPlan(newPlan), true);
     }
     return res;
   }
@@ -218,8 +219,9 @@ public class CompactionAdminClient extends AbstractHoodieClient {
    */
   private static HoodieCompactionPlan getCompactionPlan(HoodieTableMetaClient metaClient, String compactionInstant)
       throws IOException {
-    HoodieCompactionPlan compactionPlan = AvroUtils.deserializeCompactionPlan(metaClient.getActiveTimeline()
-        .getInstantAuxiliaryDetails(HoodieTimeline.getCompactionRequestedInstant(compactionInstant)).get());
+    HoodieCompactionPlan compactionPlan = AvroUtils.deserializeCompactionPlan(
+        metaClient.getActiveTimeline().readPlanAsBytes(
+            HoodieTimeline.getCompactionRequestedInstant(compactionInstant)).get());
     return compactionPlan;
   }
 
@@ -333,7 +335,7 @@ public class CompactionAdminClient extends AbstractHoodieClient {
         }
       } else {
         throw new CompactionValidationException(
-            "Unable to find any committed instant. Compaction Operation may " + "be pointing to stale file-slices");
+            "Unable to find any committed instant. Compaction Operation may be pointing to stale file-slices");
       }
     } catch (CompactionValidationException | IllegalArgumentException e) {
       return new ValidationOpResult(operation, false, Option.of(e));
