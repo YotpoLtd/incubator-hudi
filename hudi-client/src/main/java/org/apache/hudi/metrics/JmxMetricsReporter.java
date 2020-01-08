@@ -22,8 +22,8 @@ import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.exception.HoodieException;
 
 import com.google.common.base.Preconditions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 
 import javax.management.remote.JMXConnectorServer;
 import javax.management.remote.JMXConnectorServerFactory;
@@ -38,20 +38,18 @@ import java.rmi.registry.LocateRegistry;
  */
 public class JmxMetricsReporter extends MetricsReporter {
 
-  private static final Logger LOG = LoggerFactory.getLogger(JmxMetricsReporter.class);
+  private static final Logger LOG = LogManager.getLogger(JmxMetricsReporter.class);
   private final JMXConnectorServer connector;
-  private String host;
-  private int port;
 
   public JmxMetricsReporter(HoodieWriteConfig config) {
     try {
       // Check the host and port here
-      this.host = config.getJmxHost();
-      this.port = config.getJmxPort();
+      String host = config.getJmxHost();
+      int port = config.getJmxPort();
       if (host == null || port == 0) {
         throw new RuntimeException(
             String.format("Jmx cannot be initialized with host[%s] and port[%s].",
-                host, port));
+                    host, port));
       }
       LocateRegistry.createRegistry(port);
       String serviceUrl =

@@ -84,9 +84,10 @@
     <hive.groupid>org.apache.hive</hive.groupid>
     <hive.version>1.1.0-cdh5.14.2</hive.version>
     <hiveservice.version>2.3.1</hiveservice.version>
-    <metrics.version>4.0.2</metrics.version>
+    <metrics.version>4.1.1</metrics.version>
     <spark.version>2.3.0.cloudera2</spark.version>
     <avro.version>1.8.2</avro.version>
+    <hive.exec.classifier>core</hive.exec.classifier>
     <scala.version>2.11.8</scala.version>
     <scala.libversion>2.11</scala.libversion>
     <apache-rat-plugin.version>0.12</apache-rat-plugin.version>
@@ -794,6 +795,7 @@
         <artifactId>hive-exec</artifactId>
         <version>${hive.version}</version>
         <scope>provided</scope>
+        <classifier>${hive.exec.classifier}</classifier>
         <exclusions>
           <exclusion>
             <groupId>javax.mail</groupId>

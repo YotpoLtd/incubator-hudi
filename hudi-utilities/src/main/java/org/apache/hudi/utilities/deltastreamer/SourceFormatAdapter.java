@@ -52,10 +52,6 @@ public final class SourceFormatAdapter {
 
   /**
    * Fetch new data in avro format. If the source provides data in different format, they are translated to Avro format
-   * 
-   * @param lastCkptStr
-   * @param sourceLimit
-   * @return
    */
   public InputBatch<JavaRDD<GenericRecord>> fetchNewDataInAvroFormat(Option<String> lastCkptStr, long sourceLimit) {
     log.info("fetchNewDataInAvroFormat");
@@ -85,10 +81,6 @@ public final class SourceFormatAdapter {
 
   /**
    * Fetch new data in row format. If the source provides data in different format, they are translated to Row format
-   * 
-   * @param lastCkptStr
-   * @param sourceLimit
-   * @return
    */
   public InputBatch<Dataset<Row>> fetchNewDataInRowFormat(Option<String> lastCkptStr, long sourceLimit) {
     log.info("fetchNewDataInRowFormat");
@@ -103,7 +95,8 @@ public final class SourceFormatAdapter {
                 .ofNullable(
                     r.getBatch()
                         .map(rdd -> AvroConversionUtils.createDataFrame(JavaRDD.toRDD(rdd), sourceSchema.toString(),
-                            source.getSparkSession()))
+                            source.getSparkSession())
+                        )
                         .orElse(null)),
             r.getCheckpointForNextBatch(), r.getSchemaProvider());
       }
