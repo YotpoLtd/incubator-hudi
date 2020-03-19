@@ -487,13 +487,13 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends
   private HoodieRollbackStat rollback(HoodieIndex hoodieIndex, String partitionPath, String commit,
       HoodieCommitMetadata commitMetadata, final Map<FileStatus, Boolean> filesToDeletedStatus,
       Map<FileStatus, Long> filesToNumBlocksRollback, Set<String> deletedFiles) {
-    // The following needs to be done since GlobalIndex at the moment does not store the latest commit time.
-    // Also, wStat.getPrevCommit() might not give the right commit time in the following
+    // wStat.getPrevCommit() might not give the right commit time in the following
     // scenario : If a compaction was scheduled, the new commitTime associated with the requested compaction will be
     // used to write the new log files. In this case, the commit time for the log file is the compaction requested time.
-    Map<String, String> fileIdToBaseCommitTimeForLogMap =
-        hoodieIndex.isGlobal() ? this.getRTFileSystemView().getLatestFileSlices(partitionPath)
-            .collect(Collectors.toMap(FileSlice::getFileId, FileSlice::getBaseInstantTime)) : null;
+    // But the index (global) might store the baseCommit of the parquet and not the requested, hence get the
+    // baseCommit always by listing the file slice
+    Map<String, String> fileIdToBaseCommitTimeForLogMap = this.getRTFileSystemView().getLatestFileSlices(partitionPath)
+            .collect(Collectors.toMap(FileSlice::getFileId, FileSlice::getBaseInstantTime));
     commitMetadata.getPartitionToWriteStats().get(partitionPath).stream()
         .filter(wStat -> {
           // Filter out stats without prevCommit since they are all inserts
@@ -501,24 +501,19 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends
               && !deletedFiles.contains(wStat.getFileId());
         }).forEach(wStat -> {
           HoodieLogFormat.Writer writer = null;
-          String baseCommitTime = wStat.getPrevCommit();
-          if (hoodieIndex.isGlobal()) {
-            baseCommitTime = fileIdToBaseCommitTimeForLogMap.get(wStat.getFileId());
-          }
+          String baseCommitTime = fileIdToBaseCommitTimeForLogMap.get(wStat.getFileId());
+          boolean success = false;
           try {
             writer = HoodieLogFormat.newWriterBuilder().onParentPath(
                 new Path(this.getMetaClient().getBasePath(), partitionPath))
                 .withFileId(wStat.getFileId()).overBaseCommit(baseCommitTime)
                 .withFs(this.metaClient.getFs())
                 .withFileExtension(HoodieLogFile.DELTA_EXTENSION).build();
-            Long numRollbackBlocks = 0L;
             // generate metadata
             Map<HeaderMetadataType, String> header = generateHeader(commit);
             // if update belongs to an existing log file
             writer = writer.appendBlock(new HoodieCommandBlock(header));
-            numRollbackBlocks++;
-            filesToNumBlocksRollback.put(this.getMetaClient().getFs()
-                .getFileStatus(writer.getLogFile().getPath()), numRollbackBlocks);
+            success = true;
           } catch (IOException | InterruptedException io) {
             throw new HoodieRollbackException(
                 "Failed to rollback for commit " + commit, io);
@@ -526,6 +521,13 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends
             try {
               if (writer != null) {
                 writer.close();
+              }
+              if (success) {
+                // This step is intentionally done after writer is closed. Guarantees that
+                // getFileStatus would reflect correct stats and FileNotFoundException is not thrown in
+                // cloud-storage : HUDI-168
+                filesToNumBlocksRollback.put(this.getMetaClient().getFs()
+                    .getFileStatus(writer.getLogFile().getPath()), 1L);
               }
             } catch (IOException io) {
               throw new UncheckedIOException(io);
