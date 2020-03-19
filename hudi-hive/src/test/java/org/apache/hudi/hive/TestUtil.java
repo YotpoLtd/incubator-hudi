@@ -18,31 +18,10 @@
 
 package org.apache.hudi.hive;
 
-import static org.junit.Assert.fail;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import java.io.File;
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.UUID;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.IndexedRecord;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.apache.hadoop.hive.conf.HiveConf;
-import org.apache.hive.service.server.HiveServer2;
 import org.apache.hudi.avro.HoodieAvroWriteSupport;
-import org.apache.hudi.common.BloomFilter;
+import org.apache.hudi.common.bloom.filter.BloomFilter;
+import org.apache.hudi.common.bloom.filter.BloomFilterFactory;
+import org.apache.hudi.common.bloom.filter.BloomFilterTypeCode;
 import org.apache.hudi.common.minicluster.HdfsTestService;
 import org.apache.hudi.common.minicluster.ZookeeperTestService;
 import org.apache.hudi.common.model.HoodieAvroPayload;
@@ -63,6 +42,19 @@ import org.apache.hudi.common.util.FSUtils;
 import org.apache.hudi.common.util.FileIOUtils;
 import org.apache.hudi.common.util.SchemaTestUtil;
 import org.apache.hudi.hive.util.HiveTestService;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import org.apache.avro.Schema;
+import org.apache.avro.generic.IndexedRecord;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hive.conf.HiveConf;
+import org.apache.hive.service.server.HiveServer2;
 import org.apache.parquet.avro.AvroSchemaConverter;
 import org.apache.parquet.hadoop.ParquetWriter;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
@@ -71,6 +63,18 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.junit.runners.model.InitializationError;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.junit.Assert.fail;
 
 @SuppressWarnings("SameParameterValue")
 public class TestUtil {
@@ -84,7 +88,7 @@ public class TestUtil {
   static FileSystem fileSystem;
   private static Set<String> createdTablesSet = Sets.newHashSet();
 
-  public static void setUp() throws IOException, InterruptedException, URISyntaxException {
+  public static void setUp() throws IOException, InterruptedException {
     if (dfsCluster == null) {
       HdfsTestService service = new HdfsTestService();
       dfsCluster = service.start(true);
@@ -149,7 +153,7 @@ public class TestUtil {
   }
 
   static void createCOWDataset(String commitTime, int numberOfPartitions)
-      throws IOException, InitializationError, URISyntaxException, InterruptedException {
+      throws IOException, InitializationError, URISyntaxException {
     Path path = new Path(hiveSyncConfig.basePath);
     FileIOUtils.deleteDirectory(new File(hiveSyncConfig.basePath));
     HoodieTableMetaClient.initTableType(configuration, hiveSyncConfig.basePath, HoodieTableType.COPY_ON_WRITE,
@@ -178,7 +182,7 @@ public class TestUtil {
         .add(hiveSyncConfig.databaseName + "." + hiveSyncConfig.tableName + HiveSyncTool.SUFFIX_REALTIME_TABLE);
     HoodieCommitMetadata compactionMetadata = new HoodieCommitMetadata();
     commitMetadata.getPartitionToWriteStats()
-        .forEach((key, value) -> value.stream().forEach(l -> compactionMetadata.addWriteStat(key, l)));
+        .forEach((key, value) -> value.forEach(l -> compactionMetadata.addWriteStat(key, l)));
     createCompactionCommitFile(compactionMetadata, commitTime);
     // Write a delta commit
     HoodieCommitMetadata deltaMetadata = createLogFiles(commitMetadata.getPartitionToWriteStats(), true);
@@ -186,7 +190,7 @@ public class TestUtil {
   }
 
   static void addCOWPartitions(int numberOfPartitions, boolean isParquetSchemaSimple, DateTime startFrom,
-      String commitTime) throws IOException, URISyntaxException, InterruptedException {
+                               String commitTime) throws IOException, URISyntaxException {
     HoodieCommitMetadata commitMetadata =
         createPartitions(numberOfPartitions, isParquetSchemaSimple, startFrom, commitTime);
     createdTablesSet.add(hiveSyncConfig.databaseName + "." + hiveSyncConfig.tableName);
@@ -194,7 +198,7 @@ public class TestUtil {
   }
 
   static void addMORPartitions(int numberOfPartitions, boolean isParquetSchemaSimple, boolean isLogSchemaSimple,
-      DateTime startFrom, String commitTime, String deltaCommitTime)
+                               DateTime startFrom, String commitTime, String deltaCommitTime)
       throws IOException, URISyntaxException, InterruptedException {
     HoodieCommitMetadata commitMetadata =
         createPartitions(numberOfPartitions, isParquetSchemaSimple, startFrom, commitTime);
@@ -203,14 +207,14 @@ public class TestUtil {
         .add(hiveSyncConfig.databaseName + "." + hiveSyncConfig.tableName + HiveSyncTool.SUFFIX_REALTIME_TABLE);
     HoodieCommitMetadata compactionMetadata = new HoodieCommitMetadata();
     commitMetadata.getPartitionToWriteStats()
-        .forEach((key, value) -> value.stream().forEach(l -> compactionMetadata.addWriteStat(key, l)));
+        .forEach((key, value) -> value.forEach(l -> compactionMetadata.addWriteStat(key, l)));
     createCompactionCommitFile(compactionMetadata, commitTime);
     HoodieCommitMetadata deltaMetadata = createLogFiles(commitMetadata.getPartitionToWriteStats(), isLogSchemaSimple);
     createDeltaCommitFile(deltaMetadata, deltaCommitTime);
   }
 
   private static HoodieCommitMetadata createLogFiles(Map<String, List<HoodieWriteStat>> partitionWriteStats,
-      boolean isLogSchemaSimple) throws InterruptedException, IOException, URISyntaxException {
+                                                     boolean isLogSchemaSimple) throws InterruptedException, IOException, URISyntaxException {
     HoodieCommitMetadata commitMetadata = new HoodieCommitMetadata();
     for (Entry<String, List<HoodieWriteStat>> wEntry : partitionWriteStats.entrySet()) {
       String partitionPath = wEntry.getKey();
@@ -228,7 +232,7 @@ public class TestUtil {
   }
 
   private static HoodieCommitMetadata createPartitions(int numberOfPartitions, boolean isParquetSchemaSimple,
-      DateTime startFrom, String commitTime) throws IOException, URISyntaxException, InterruptedException {
+                                                       DateTime startFrom, String commitTime) throws IOException, URISyntaxException {
     startFrom = startFrom.withTimeAtStartOfDay();
 
     HoodieCommitMetadata commitMetadata = new HoodieCommitMetadata();
@@ -245,7 +249,7 @@ public class TestUtil {
   }
 
   private static List<HoodieWriteStat> createTestData(Path partPath, boolean isParquetSchemaSimple, String commitTime)
-      throws IOException, URISyntaxException, InterruptedException {
+      throws IOException, URISyntaxException {
     List<HoodieWriteStat> writeStats = Lists.newArrayList();
     for (int i = 0; i < 5; i++) {
       // Create 5 files
@@ -262,10 +266,11 @@ public class TestUtil {
 
   @SuppressWarnings({"unchecked", "deprecation"})
   private static void generateParquetData(Path filePath, boolean isParquetSchemaSimple)
-      throws IOException, URISyntaxException, InterruptedException {
+      throws IOException, URISyntaxException {
     Schema schema = (isParquetSchemaSimple ? SchemaTestUtil.getSimpleSchema() : SchemaTestUtil.getEvolvedSchema());
     org.apache.parquet.schema.MessageType parquetSchema = new AvroSchemaConverter().convert(schema);
-    BloomFilter filter = new BloomFilter(1000, 0.0001);
+    BloomFilter filter = BloomFilterFactory.createBloomFilter(1000, 0.0001, -1,
+        BloomFilterTypeCode.SIMPLE.name());
     HoodieAvroWriteSupport writeSupport = new HoodieAvroWriteSupport(parquetSchema, schema, filter);
     ParquetWriter writer = new ParquetWriter(filePath, writeSupport, CompressionCodecName.GZIP, 120 * 1024 * 1024,
         ParquetWriter.DEFAULT_PAGE_SIZE, ParquetWriter.DEFAULT_PAGE_SIZE, ParquetWriter.DEFAULT_IS_DICTIONARY_ENABLED,

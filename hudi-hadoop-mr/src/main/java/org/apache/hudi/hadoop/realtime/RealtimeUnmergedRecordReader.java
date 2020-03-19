@@ -18,15 +18,6 @@
 
 package org.apache.hudi.hadoop.realtime;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hudi.common.table.log.HoodieUnMergedLogRecordScanner;
 import org.apache.hudi.common.util.DefaultSizeEstimator;
 import org.apache.hudi.common.util.FSUtils;
@@ -38,17 +29,27 @@ import org.apache.hudi.common.util.queue.IteratorBasedQueueProducer;
 import org.apache.hudi.hadoop.RecordReaderValueIterator;
 import org.apache.hudi.hadoop.SafeParquetRecordReaderWrapper;
 
+import org.apache.avro.generic.GenericRecord;
+import org.apache.hadoop.io.ArrayWritable;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.RecordReader;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 class RealtimeUnmergedRecordReader extends AbstractRealtimeRecordReader
-    implements RecordReader<NullWritable, ArrayWritable> {
+    implements RecordReader<Void, ArrayWritable> {
 
   // Log Record unmerged scanner
   private final HoodieUnMergedLogRecordScanner logRecordScanner;
 
   // Parquet record reader
-  private final RecordReader<NullWritable, ArrayWritable> parquetReader;
+  private final RecordReader<Void, ArrayWritable> parquetReader;
 
   // Parquet record iterator wrapper for the above reader
-  private final RecordReaderValueIterator<NullWritable, ArrayWritable> parquetRecordsIterator;
+  private final RecordReaderValueIterator<Void, ArrayWritable> parquetRecordsIterator;
 
   // Executor that runs the above producers in parallel
   private final BoundedInMemoryExecutor<ArrayWritable, ArrayWritable, ?> executor;
@@ -58,14 +59,14 @@ class RealtimeUnmergedRecordReader extends AbstractRealtimeRecordReader
 
   /**
    * Construct a Unmerged record reader that parallely consumes both parquet and log records and buffers for upstream
-   * clients to consume
+   * clients to consume.
    *
    * @param split File split
    * @param job Job Configuration
    * @param realReader Parquet Reader
    */
   public RealtimeUnmergedRecordReader(HoodieRealtimeFileSplit split, JobConf job,
-      RecordReader<NullWritable, ArrayWritable> realReader) {
+      RecordReader<Void, ArrayWritable> realReader) {
     super(split, job);
     this.parquetReader = new SafeParquetRecordReaderWrapper(realReader);
     // Iterator for consuming records from parquet file
@@ -103,7 +104,7 @@ class RealtimeUnmergedRecordReader extends AbstractRealtimeRecordReader
   }
 
   @Override
-  public boolean next(NullWritable key, ArrayWritable value) throws IOException {
+  public boolean next(Void key, ArrayWritable value) throws IOException {
     if (!iterator.hasNext()) {
       return false;
     }
@@ -113,7 +114,7 @@ class RealtimeUnmergedRecordReader extends AbstractRealtimeRecordReader
   }
 
   @Override
-  public NullWritable createKey() {
+  public Void createKey() {
     return parquetReader.createKey();
   }
 

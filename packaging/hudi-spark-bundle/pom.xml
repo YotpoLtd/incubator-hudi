@@ -82,6 +82,12 @@
                   <include>org.apache.httpcomponents:fluent-hc</include>
                   <include>org.antlr:stringtemplate</include>
                   <include>org.apache.parquet:parquet-avro</include>
+                  <include>org.apache.parquet:parquet-column</include>
+                  <include>org.apache.parquet:parquet-common</include>
+                  <include>org.apache.parquet:parquet-encoding</include>
+                  <include>org.apache.parquet:parquet-hadoop</include>
+                  <include>org.apache.parquet:parquet-jackson</include>
+                  <include>org.apache.parquet:parquet-format</include>
 
                   <include>com.twitter:bijection-avro_2.11</include>
                   <include>com.twitter:bijection-core_2.11</include>
@@ -94,8 +100,7 @@
                   <include>org.apache.hive:hive-service-rpc</include>
                   <include>org.apache.hive:hive-metastore</include>
                   <include>org.apache.hive:hive-jdbc</include>
-
-                  <include>com.databricks:spark-avro_2.11</include>
+                  <include>org.apache.avro:avro</include>
                 </includes>
               </artifactSet>
               <relocations>
@@ -103,7 +108,15 @@
                   <pattern>com.beust.jcommander.</pattern>
                   <shadedPattern>org.apache.hudi.com.beust.jcommander.</shadedPattern>
                 </relocation>
+                <!--<relocation>
+                  <pattern>org.apache.avro</pattern>
+                  <shadedPattern>com.apache.hudi.org.apache.avro</shadedPattern>
+                </relocation>-->
                 <relocation>
+                  <pattern>org.apache.parquet</pattern>
+                  <shadedPattern>${spark.bundle.parquet.shade.prefix}org.apache.parquet</shadedPattern>
+                </relocation>
+                <!--<relocation>
                   <pattern>org.apache.hive.jdbc.</pattern>
                   <shadedPattern>${spark.bundle.hive.shade.prefix}org.apache.hive.jdbc.</shadedPattern>
                 </relocation>
@@ -132,16 +145,16 @@
                   <shadedPattern>${spark.bundle.hive.shade.prefix}org.apache.hadoop.hive.service.</shadedPattern>
                 </relocation>
                 <relocation>
+                  <pattern>org.apache.hadoop.hive.serde2.</pattern>
+                  <shadedPattern>${spark.bundle.hive.shade.prefix}org.apache.hadoop.hive.serde2.</shadedPattern>
+                </relocation>-->
+                <relocation>
                   <pattern>com.codahale.metrics.</pattern>
                   <shadedPattern>org.apache.hudi.com.codahale.metrics.</shadedPattern>
                 </relocation>
                 <relocation>
                   <pattern>org.apache.commons.codec.</pattern>
                   <shadedPattern>org.apache.hudi.org.apache.commons.codec.</shadedPattern>
-                </relocation>
-                <relocation>
-                  <pattern>com.databricks.</pattern>
-                  <shadedPattern>org.apache.hudi.com.databricks.</shadedPattern>
                 </relocation>
                 <!-- TODO: Revisit GH ISSUE #533 & PR#633-->
               </relocations>
@@ -218,7 +231,7 @@
     <dependency>
       <groupId>${hive.groupid}</groupId>
       <artifactId>hive-service-rpc</artifactId>
-      <version>${hive.version}</version>
+      <version>${hiveservice.version}</version>
       <scope>${spark.bundle.hive.scope}</scope>
     </dependency>
 

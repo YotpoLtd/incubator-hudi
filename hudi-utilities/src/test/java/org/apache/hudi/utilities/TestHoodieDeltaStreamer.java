@@ -18,23 +18,6 @@
 
 package org.apache.hudi.utilities;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericRecord;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hudi.DataSourceWriteOptions;
 import org.apache.hudi.SimpleKeyGenerator;
 import org.apache.hudi.common.model.HoodieCommitMetadata;
@@ -62,6 +45,11 @@ import org.apache.hudi.utilities.sources.TestDataSource;
 import org.apache.hudi.utilities.sources.config.TestSourceConfig;
 import org.apache.hudi.utilities.transform.SqlQueryBasedTransformer;
 import org.apache.hudi.utilities.transform.Transformer;
+
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaRDD;
@@ -80,6 +68,20 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 /**
  * Basic tests against {@link HoodieDeltaStreamer}, by issuing bulk_inserts, upserts, inserts. Check counts at the end.
  */
@@ -87,7 +89,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
 
   private static final String PROPS_FILENAME_TEST_SOURCE = "test-source.properties";
   private static final String PROPS_FILENAME_TEST_INVALID = "test-invalid.properties";
-  private static volatile Logger log = LogManager.getLogger(TestHoodieDeltaStreamer.class);
+  private static final Logger LOG = LogManager.getLogger(TestHoodieDeltaStreamer.class);
 
   @BeforeClass
   public static void initClass() throws Exception {
@@ -111,7 +113,6 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
     props.setProperty(DataSourceWriteOptions.HIVE_URL_OPT_KEY(), "jdbc:hive2://127.0.0.1:9999/");
     props.setProperty(DataSourceWriteOptions.HIVE_DATABASE_OPT_KEY(), "testdb1");
     props.setProperty(DataSourceWriteOptions.HIVE_TABLE_OPT_KEY(), "hive_trips");
-    props.setProperty(DataSourceWriteOptions.HIVE_ASSUME_DATE_PARTITION_OPT_KEY(), "false");
     props.setProperty(DataSourceWriteOptions.HIVE_PARTITION_FIELDS_OPT_KEY(), "datestr");
     props.setProperty(DataSourceWriteOptions.HIVE_PARTITION_EXTRACTOR_CLASS_OPT_KEY(),
         MultiPartKeysValueExtractor.class.getName());
@@ -177,7 +178,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
     }
 
     static HoodieDeltaStreamer.Config makeConfig(String basePath, Operation op, String transformerClassName,
-        String propsFilename, boolean enableHiveSync, boolean useSchemaProviderClass) {
+                                                 String propsFilename, boolean enableHiveSync, boolean useSchemaProviderClass) {
       HoodieDeltaStreamer.Config cfg = new HoodieDeltaStreamer.Config();
       cfg.targetBasePath = basePath;
       cfg.targetTableName = "hoodie_trips";
@@ -196,7 +197,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
     }
 
     static HoodieDeltaStreamer.Config makeConfigForHudiIncrSrc(String srcBasePath, String basePath, Operation op,
-        boolean addReadLatestOnMissingCkpt, String schemaProviderClassName) {
+                                                               boolean addReadLatestOnMissingCkpt, String schemaProviderClassName) {
       HoodieDeltaStreamer.Config cfg = new HoodieDeltaStreamer.Config();
       cfg.targetBasePath = basePath;
       cfg.targetTableName = "hoodie_trips_copy";
@@ -245,7 +246,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
     static void assertAtleastNCompactionCommits(int minExpected, String datasetPath, FileSystem fs) {
       HoodieTableMetaClient meta = new HoodieTableMetaClient(fs.getConf(), datasetPath);
       HoodieTimeline timeline = meta.getActiveTimeline().getCommitTimeline().filterCompletedInstants();
-      log.info("Timeline Instants=" + meta.getActiveTimeline().getInstants().collect(Collectors.toList()));
+      LOG.info("Timeline Instants=" + meta.getActiveTimeline().getInstants().collect(Collectors.toList()));
       int numCompactionCommits = (int) timeline.getInstants().count();
       assertTrue("Got=" + numCompactionCommits + ", exp >=" + minExpected, minExpected <= numCompactionCommits);
     }
@@ -253,7 +254,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
     static void assertAtleastNDeltaCommits(int minExpected, String datasetPath, FileSystem fs) {
       HoodieTableMetaClient meta = new HoodieTableMetaClient(fs.getConf(), datasetPath);
       HoodieTimeline timeline = meta.getActiveTimeline().getDeltaCommitTimeline().filterCompletedInstants();
-      log.info("Timeline Instants=" + meta.getActiveTimeline().getInstants().collect(Collectors.toList()));
+      LOG.info("Timeline Instants=" + meta.getActiveTimeline().getInstants().collect(Collectors.toList()));
       int numDeltaCommits = (int) timeline.getInstants().count();
       assertTrue("Got=" + numDeltaCommits + ", exp >=" + minExpected, minExpected <= numDeltaCommits);
     }
@@ -278,7 +279,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
             Thread.sleep(3000);
             ret = condition.apply(true);
           } catch (Throwable error) {
-            log.warn("Got error :", error);
+            LOG.warn("Got error :", error);
             ret = false;
           }
         }
@@ -289,7 +290,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
   }
 
   @Test
-  public void testProps() throws IOException {
+  public void testProps() {
     TypedProperties props =
         new DFSPropertiesConfiguration(dfs, new Path(dfsBasePath + "/" + PROPS_FILENAME_TEST_SOURCE)).getConfig();
     assertEquals(2, props.getInteger("hoodie.upsert.shuffle.parallelism"));
@@ -309,7 +310,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
       fail("Should error out when setting the key generator class property to an invalid value");
     } catch (IOException e) {
       // expected
-      log.error("Expected error during getting the key generator", e);
+      LOG.error("Expected error during getting the key generator", e);
       assertTrue(e.getMessage().contains("Could not load key generator class"));
     }
   }
@@ -324,7 +325,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
       fail("Should error out when pointed out at a dir thats not a dataset");
     } catch (DatasetNotFoundException e) {
       // expected
-      log.error("Expected error during dataset creation", e);
+      LOG.error("Expected error during dataset creation", e);
     }
   }
 
@@ -350,11 +351,11 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
     cfg.sourceLimit = 2000;
     cfg.operation = Operation.UPSERT;
     new HoodieDeltaStreamer(cfg, jsc).sync();
-    TestHelpers.assertRecordCount(2000, datasetBasePath + "/*/*.parquet", sqlContext);
-    TestHelpers.assertDistanceCount(2000, datasetBasePath + "/*/*.parquet", sqlContext);
+    TestHelpers.assertRecordCount(1950, datasetBasePath + "/*/*.parquet", sqlContext);
+    TestHelpers.assertDistanceCount(1950, datasetBasePath + "/*/*.parquet", sqlContext);
     TestHelpers.assertCommitMetadata("00001", datasetBasePath, dfs, 2);
     List<Row> counts = TestHelpers.countsPerCommit(datasetBasePath + "/*/*.parquet", sqlContext);
-    assertEquals(2000, counts.get(0).getLong(1));
+    assertEquals(1950, counts.stream().mapToLong(entry -> entry.getLong(1)).sum());
   }
 
   @Test
@@ -394,8 +395,8 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
       } else {
         TestHelpers.assertAtleastNCompactionCommits(5, datasetBasePath, dfs);
       }
-      TestHelpers.assertRecordCount(totalRecords, datasetBasePath + "/*/*.parquet", sqlContext);
-      TestHelpers.assertDistanceCount(totalRecords, datasetBasePath + "/*/*.parquet", sqlContext);
+      TestHelpers.assertRecordCount(totalRecords + 200, datasetBasePath + "/*/*.parquet", sqlContext);
+      TestHelpers.assertDistanceCount(totalRecords + 200, datasetBasePath + "/*/*.parquet", sqlContext);
       return true;
     }, 180);
     ds.shutdownGracefully();
@@ -455,12 +456,12 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
     cfg.sourceLimit = 2000;
     cfg.operation = Operation.UPSERT;
     new HoodieDeltaStreamer(cfg, jsc, dfs, hiveServer.getHiveConf()).sync();
-    TestHelpers.assertRecordCount(2000, datasetBasePath + "/*/*.parquet", sqlContext);
-    TestHelpers.assertDistanceCount(2000, datasetBasePath + "/*/*.parquet", sqlContext);
-    TestHelpers.assertDistanceCountWithExactValue(2000, datasetBasePath + "/*/*.parquet", sqlContext);
+    TestHelpers.assertRecordCount(1950, datasetBasePath + "/*/*.parquet", sqlContext);
+    TestHelpers.assertDistanceCount(1950, datasetBasePath + "/*/*.parquet", sqlContext);
+    TestHelpers.assertDistanceCountWithExactValue(1950, datasetBasePath + "/*/*.parquet", sqlContext);
     lastInstantForUpstreamTable = TestHelpers.assertCommitMetadata("00001", datasetBasePath, dfs, 2);
     List<Row> counts = TestHelpers.countsPerCommit(datasetBasePath + "/*/*.parquet", sqlContext);
-    assertEquals(2000, counts.get(0).getLong(1));
+    assertEquals(1950, counts.stream().mapToLong(entry -> entry.getLong(1)).sum());
 
     // Incrementally pull changes in upstream hudi table and apply to downstream table
     downstreamCfg =
@@ -474,7 +475,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
     String finalInstant =
         TestHelpers.assertCommitMetadata(lastInstantForUpstreamTable, downstreamDatasetBasePath, dfs, 2);
     counts = TestHelpers.countsPerCommit(downstreamDatasetBasePath + "/*/*.parquet", sqlContext);
-    assertEquals(2000, counts.get(0).getLong(1));
+    assertEquals(2000, counts.stream().mapToLong(entry -> entry.getLong(1)).sum());
 
     // Test Hive integration
     HoodieHiveClient hiveClient = new HoodieHiveClient(hiveSyncConfig, hiveServer.getHiveConf(), dfs);
@@ -495,7 +496,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
       new HoodieDeltaStreamer(cfg, jsc, dfs, hiveServer.getHiveConf()).sync();
       fail("Should error out when schema provider is not provided");
     } catch (HoodieException e) {
-      log.error("Expected error during reading data from source ", e);
+      LOG.error("Expected error during reading data from source ", e);
       assertTrue(e.getMessage().contains("Please provide a valid schema provider class!"));
     }
   }
@@ -545,7 +546,7 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
   }
 
   @Test
-  public void testDistributedTestDataSource() throws Exception {
+  public void testDistributedTestDataSource() {
     TypedProperties props = new TypedProperties();
     props.setProperty(TestSourceConfig.MAX_UNIQUE_RECORDS_PROP, "1000");
     props.setProperty(TestSourceConfig.NUM_SOURCE_PARTITIONS_PROP, "1");
@@ -558,18 +559,17 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
   }
 
   /**
-   * UDF to calculate Haversine distance
+   * UDF to calculate Haversine distance.
    */
   public static class DistanceUDF implements UDF4<Double, Double, Double, Double, Double> {
 
     /**
-     * Returns some random number as distance between the points
-     * 
+     * Returns some random number as distance between the points.
+     *
      * @param lat1 Latitiude of source
      * @param lat2 Latitude of destination
      * @param lon1 Longitude of source
      * @param lon2 Longitude of destination
-     * @return
      */
     @Override
     public Double call(Double lat1, Double lat2, Double lon1, Double lon2) {
@@ -578,13 +578,13 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
   }
 
   /**
-   * Adds a new field "haversine_distance" to the row
+   * Adds a new field "haversine_distance" to the row.
    */
   public static class TripsWithDistanceTransformer implements Transformer {
 
     @Override
     public Dataset<Row> apply(JavaSparkContext jsc, SparkSession sparkSession, Dataset<Row> rowDataset,
-        TypedProperties properties) {
+                              TypedProperties properties) {
       rowDataset.sqlContext().udf().register("distance_udf", new DistanceUDF(), DataTypes.DoubleType);
       return rowDataset.withColumn("haversine_distance", functions.callUDF("distance_udf", functions.col("begin_lat"),
           functions.col("end_lat"), functions.col("begin_lon"), functions.col("end_lat")));
@@ -599,13 +599,13 @@ public class TestHoodieDeltaStreamer extends UtilitiesTestBase {
   }
 
   /**
-   * Return empty dataset
+   * Return empty dataset.
    */
   public static class DropAllTransformer implements Transformer {
 
     @Override
     public Dataset apply(JavaSparkContext jsc, SparkSession sparkSession, Dataset<Row> rowDataset,
-        TypedProperties properties) {
+                         TypedProperties properties) {
       System.out.println("DropAllTransformer called !!");
       return sparkSession.createDataFrame(jsc.emptyRDD(), rowDataset.schema());
     }

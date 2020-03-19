@@ -73,21 +73,24 @@
 
     <fasterxml.version>2.6.7</fasterxml.version>
     <glassfish.version>2.17</glassfish.version>
-    <parquet.version>1.8.1</parquet.version>
+    <parquet.version>1.8.2</parquet.version>
     <junit.version>4.11</junit.version>
     <junit-dep.version>4.10</junit-dep.version>
     <mockito.version>1.10.19</mockito.version>
     <log4j.version>1.2.17</log4j.version>
     <slf4j.version>1.7.5</slf4j.version>
     <joda.version>2.9.9</joda.version>
-    <hadoop.version>2.7.3</hadoop.version>
+    <hadoop.version>2.6.0-cdh5.14.2</hadoop.version>
     <hive.groupid>org.apache.hive</hive.groupid>
-    <hive.version>2.3.1</hive.version>
-    <metrics.version>4.0.2</metrics.version>
-    <spark.version>2.1.0</spark.version>
-    <avro.version>1.7.7</avro.version>
+    <hive.version>1.1.0-cdh5.14.2</hive.version>
+    <hiveservice.version>2.3.1</hiveservice.version>
+    <metrics.version>4.1.1</metrics.version>
+    <spark.version>2.3.0.cloudera2</spark.version>
+    <avro.version>1.8.2</avro.version>
+    <hive.exec.classifier>core</hive.exec.classifier>
     <scala.version>2.11.8</scala.version>
     <scala.libversion>2.11</scala.libversion>
+    <apache-rat-plugin.version>0.12</apache-rat-plugin.version>
     <scala-maven-plugin.version>3.3.1</scala-maven-plugin.version>
     <scalatest.version>3.0.1</scalatest.version>
     <surefire-log4j.file>file://${project.basedir}/src/test/resources/log4j-surefire.properties</surefire-log4j.file>
@@ -100,12 +103,27 @@
     <skipUTs>${skipTests}</skipUTs>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <main.basedir>${project.basedir}</main.basedir>
-    <mr.bundle.avro.scope>provided</mr.bundle.avro.scope>
-    <mr.bundle.avro.shade.prefix></mr.bundle.avro.shade.prefix>
-    <spark.bundle.hive.scope>provided</spark.bundle.hive.scope>
+
+    <mr.bundle.avro.scope>compile</mr.bundle.avro.scope>
+    <mr.bundle.avro.shade.prefix>org.apache.hudi.</mr.bundle.avro.shade.prefix>
+
+    <mr.bundle.parquet.scope>compile</mr.bundle.parquet.scope>
+    <mr.bundle.parquet.shade.prefix>org.apache.hudi.</mr.bundle.parquet.shade.prefix>
+
+
+    <spark.bundle.hive.scope>compile</spark.bundle.hive.scope>
     <spark.bundle.hive.shade.prefix></spark.bundle.hive.shade.prefix>
-    <utilities.bundle.hive.scope>provided</utilities.bundle.hive.scope>
+
+    <utilities.bundle.hive.scope>compile</utilities.bundle.hive.scope>
     <utilities.bundle.hive.shade.prefix></utilities.bundle.hive.shade.prefix>
+
+    <utilities.bundle.parquet.shade.prefix>org.apache.hudi.</utilities.bundle.parquet.shade.prefix>
+    <utilities.bundle.parquet.scope>compile</utilities.bundle.parquet.scope>
+
+    <spark.bundle.parquet.scope>compile</spark.bundle.parquet.scope>
+    <spark.bundle.parquet.shade.prefix>org.apache.hudi.</spark.bundle.parquet.shade.prefix>
+
+
   </properties>
 
   <scm>
@@ -162,7 +180,7 @@
           <failOnWarning>false</failOnWarning>
           <sourceDirectory>${project.basedir}/src/main/scala</sourceDirectory>
           <testSourceDirectory>${project.basedir}/src/test/scala</testSourceDirectory>
-          <configLocation>${main.basedir}/style/scalastyle-config.xml</configLocation>
+          <configLocation>${main.basedir}/style/scalastyle.xml</configLocation>
           <outputEncoding>UTF-8</outputEncoding>
         </configuration>
         <executions>
@@ -306,6 +324,7 @@
           <!-- excludes are inherited -->
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
+          <version>${apache-rat-plugin.version}</version>
           <configuration>
             <excludeSubProjects>false</excludeSubProjects>
             <numUnapprovedLicenses>0</numUnapprovedLicenses>
@@ -452,7 +471,7 @@
         <groupId>org.apache.avro</groupId>
         <artifactId>avro</artifactId>
         <version>${avro.version}</version>
-        <scope>provided</scope>
+        <scope>compile</scope>
       </dependency>
 
       <!-- Parquet -->
@@ -460,7 +479,7 @@
         <groupId>org.apache.parquet</groupId>
         <artifactId>parquet-avro</artifactId>
         <version>${parquet.version}</version>
-        <scope>provided</scope>
+        <scope>compile</scope>
       </dependency>
 
       <!-- Spark -->
@@ -478,11 +497,6 @@
       </dependency>
 
       <!-- Spark (Packages) -->
-      <dependency>
-        <groupId>com.databricks</groupId>
-        <artifactId>spark-avro_2.11</artifactId>
-        <version>4.0.0</version>
-      </dependency>
 
       <!-- Dropwizard Metrics -->
       <dependency>
@@ -781,6 +795,7 @@
         <artifactId>hive-exec</artifactId>
         <version>${hive.version}</version>
         <scope>provided</scope>
+        <classifier>${hive.exec.classifier}</classifier>
         <exclusions>
           <exclusion>
             <groupId>javax.mail</groupId>
@@ -912,7 +927,7 @@
                 </goals>
               </execution>
             </executions>
- 	  </plugin>
+ 	      </plugin>
         </plugins>
       </build>
     </profile>

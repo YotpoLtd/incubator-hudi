@@ -18,25 +18,6 @@
 
 package org.apache.hudi.hadoop;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat;
-import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.RecordReader;
-import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hudi.common.model.HoodieDataFile;
 import org.apache.hudi.common.model.HoodiePartitionMetadata;
 import org.apache.hudi.common.table.HoodieTableMetaClient;
@@ -47,8 +28,28 @@ import org.apache.hudi.common.table.view.HoodieTableFileSystemView;
 import org.apache.hudi.exception.DatasetNotFoundException;
 import org.apache.hudi.exception.HoodieIOException;
 import org.apache.hudi.exception.InvalidDatasetException;
+
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat;
+import org.apache.hadoop.io.ArrayWritable;
+import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.RecordReader;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * HoodieInputFormat which understands the Hoodie File Structure and filters files based on the Hoodie Mode. If paths
@@ -58,7 +59,7 @@ import org.apache.log4j.Logger;
 @UseFileSplitsFromInputFormat
 public class HoodieParquetInputFormat extends MapredParquetInputFormat implements Configurable {
 
-  private static final transient Logger LOG = LogManager.getLogger(HoodieParquetInputFormat.class);
+  private static final Logger LOG = LogManager.getLogger(HoodieParquetInputFormat.class);
 
   protected Configuration conf;
 
@@ -171,16 +172,18 @@ public class HoodieParquetInputFormat extends MapredParquetInputFormat implement
     return grouped;
   }
 
+  @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
   }
 
+  @Override
   public Configuration getConf() {
     return conf;
   }
 
   @Override
-  public RecordReader<NullWritable, ArrayWritable> getRecordReader(final InputSplit split, final JobConf job,
+  public RecordReader<Void, ArrayWritable> getRecordReader(final InputSplit split, final JobConf job,
       final Reporter reporter) throws IOException {
     // TODO enable automatic predicate pushdown after fixing issues
     // FileSplit fileSplit = (FileSplit) split;

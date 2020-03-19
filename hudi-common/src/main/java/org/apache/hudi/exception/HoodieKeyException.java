@@ -16,30 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hudi.common;
+package org.apache.hudi.exception;
 
-import java.io.IOException;
-import org.junit.Test;
+/**
+ * <p>
+ * Exception thrown for Hoodie Key Generator related errors.
+ * </p>
+ */
+public class HoodieKeyException extends HoodieException {
 
-public class TestBloomFilter {
-
-  @Test
-  public void testAddKey() {
-    BloomFilter filter = new BloomFilter(100, 0.0000001);
-    filter.add("key1");
-    assert (filter.mightContain("key1"));
+  public HoodieKeyException(String msg) {
+    super(msg);
   }
 
-  @Test
-  public void testSerialize() throws IOException, ClassNotFoundException {
-    BloomFilter filter = new BloomFilter(1000, 0.0000001);
-    filter.add("key1");
-    filter.add("key2");
-    String filterStr = filter.serializeToString();
-
-    // Rebuild
-    BloomFilter newFilter = new BloomFilter(filterStr);
-    assert (newFilter.mightContain("key1"));
-    assert (newFilter.mightContain("key2"));
+  public HoodieKeyException(String msg, Throwable e) {
+    super(msg, e);
   }
 }

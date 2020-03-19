@@ -18,12 +18,6 @@
 
 package org.apache.hudi.io;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.util.List;
-import java.util.stream.Collectors;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hudi.HoodieClientTestHarness;
 import org.apache.hudi.HoodieWriteClient;
 import org.apache.hudi.WriteStatus;
@@ -44,10 +38,18 @@ import org.apache.hudi.exception.HoodieNotSupportedException;
 import org.apache.hudi.index.HoodieIndex;
 import org.apache.hudi.index.bloom.HoodieBloomIndex;
 import org.apache.hudi.table.HoodieTable;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.spark.api.java.JavaRDD;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestHoodieCompactor extends HoodieClientTestHarness {
 
@@ -99,7 +101,7 @@ public class TestHoodieCompactor extends HoodieClientTestHarness {
   public void testCompactionOnCopyOnWriteFail() throws Exception {
     metaClient = HoodieTestUtils.init(hadoopConf, basePath, HoodieTableType.COPY_ON_WRITE);
     HoodieTable table = HoodieTable.getHoodieTable(metaClient, getConfig(), jsc);
-    String compactionInstantTime = HoodieActiveTimeline.createNewCommitTime();
+    String compactionInstantTime = HoodieActiveTimeline.createNewInstantTime();
     table.compact(jsc, compactionInstantTime, table.scheduleCompaction(jsc, compactionInstantTime));
   }
 
@@ -115,7 +117,7 @@ public class TestHoodieCompactor extends HoodieClientTestHarness {
       JavaRDD<HoodieRecord> recordsRDD = jsc.parallelize(records, 1);
       writeClient.insert(recordsRDD, newCommitTime).collect();
 
-      String compactionInstantTime = HoodieActiveTimeline.createNewCommitTime();
+      String compactionInstantTime = HoodieActiveTimeline.createNewInstantTime();
       JavaRDD<WriteStatus> result =
           table.compact(jsc, compactionInstantTime, table.scheduleCompaction(jsc, compactionInstantTime));
       assertTrue("If there is nothing to compact, result will be empty", result.isEmpty());
@@ -165,7 +167,7 @@ public class TestHoodieCompactor extends HoodieClientTestHarness {
       metaClient = HoodieTableMetaClient.reload(metaClient);
       table = HoodieTable.getHoodieTable(metaClient, config, jsc);
 
-      String compactionInstantTime = HoodieActiveTimeline.createNewCommitTime();
+      String compactionInstantTime = HoodieActiveTimeline.createNewInstantTime();
       JavaRDD<WriteStatus> result =
           table.compact(jsc, compactionInstantTime, table.scheduleCompaction(jsc, compactionInstantTime));
 

@@ -18,17 +18,6 @@
 
 package org.apache.hudi.timeline.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
-import io.javalin.Context;
-import io.javalin.Handler;
-import io.javalin.Javalin;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hudi.common.table.HoodieTimeline;
 import org.apache.hudi.common.table.SyncableFileSystemView;
 import org.apache.hudi.common.table.timeline.dto.CompactionOpDTO;
@@ -42,21 +31,33 @@ import org.apache.hudi.common.table.view.RemoteHoodieTableFileSystemView;
 import org.apache.hudi.timeline.service.handlers.DataFileHandler;
 import org.apache.hudi.timeline.service.handlers.FileSliceHandler;
 import org.apache.hudi.timeline.service.handlers.TimelineHandler;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
+import io.javalin.Context;
+import io.javalin.Handler;
+import io.javalin.Javalin;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
- * Main REST Handler class that handles local view staleness and delegates calls to slice/data-file/timeline handlers
+ * Main REST Handler class that handles local view staleness and delegates calls to slice/data-file/timeline handlers.
  */
 public class FileSystemViewHandler {
 
-  private static final ObjectMapper mapper = new ObjectMapper();
-  private static final Logger logger = LogManager.getLogger(FileSystemViewHandler.class);
+  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final Logger LOG = LogManager.getLogger(FileSystemViewHandler.class);
 
   private final FileSystemViewManager viewManager;
   private final Javalin app;
-  private final Configuration conf;
   private final TimelineHandler instantHandler;
   private final FileSliceHandler sliceHandler;
   private final DataFileHandler dataFileHandler;
@@ -64,7 +65,6 @@ public class FileSystemViewHandler {
   public FileSystemViewHandler(Javalin app, Configuration conf, FileSystemViewManager viewManager) throws IOException {
     this.viewManager = viewManager;
     this.app = app;
-    this.conf = conf;
     this.instantHandler = new TimelineHandler(conf, viewManager);
     this.sliceHandler = new FileSliceHandler(conf, viewManager);
     this.dataFileHandler = new DataFileHandler(conf, viewManager);
@@ -77,7 +77,7 @@ public class FileSystemViewHandler {
   }
 
   /**
-   * Determines if local view of dataset's timeline is behind that of client's view
+   * Determines if local view of dataset's timeline is behind that of client's view.
    */
   private boolean isLocalViewBehind(Context ctx) {
     String basePath = ctx.queryParam(RemoteHoodieTableFileSystemView.BASEPATH_PARAM);
@@ -86,13 +86,13 @@ public class FileSystemViewHandler {
     String timelineHashFromClient = ctx.queryParam(RemoteHoodieTableFileSystemView.TIMELINE_HASH, "");
     HoodieTimeline localTimeline =
         viewManager.getFileSystemView(basePath).getTimeline().filterCompletedAndCompactionInstants();
-    if (logger.isDebugEnabled()) {
-      logger.debug("Client [ LastTs=" + lastKnownInstantFromClient + ", TimelineHash=" + timelineHashFromClient
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Client [ LastTs=" + lastKnownInstantFromClient + ", TimelineHash=" + timelineHashFromClient
           + "], localTimeline=" + localTimeline.getInstants().collect(Collectors.toList()));
     }
 
     if ((localTimeline.getInstants().count() == 0)
-        && lastKnownInstantFromClient.equals(HoodieTimeline.INVALID_INSTANT_TS)) {
+        && HoodieTimeline.INVALID_INSTANT_TS.equals(lastKnownInstantFromClient)) {
       return false;
     }
 
@@ -106,7 +106,7 @@ public class FileSystemViewHandler {
   }
 
   /**
-   * Syncs data-set view if local view is behind
+   * Syncs data-set view if local view is behind.
    */
   private boolean syncIfLocalViewBehind(Context ctx) {
     if (isLocalViewBehind(ctx)) {
@@ -117,7 +117,7 @@ public class FileSystemViewHandler {
       synchronized (view) {
         if (isLocalViewBehind(ctx)) {
           HoodieTimeline localTimeline = viewManager.getFileSystemView(basePath).getTimeline();
-          logger.warn("Syncing view as client passed last known instant " + lastKnownInstantFromClient
+          LOG.warn("Syncing view as client passed last known instant " + lastKnownInstantFromClient
               + " as last known instant but server has the folling timeline :"
               + localTimeline.getInstants().collect(Collectors.toList()));
           view.sync();
@@ -129,17 +129,17 @@ public class FileSystemViewHandler {
   }
 
   private void writeValueAsString(Context ctx, Object obj) throws JsonProcessingException {
-    boolean prettyPrint = ctx.queryParam("pretty") != null ? true : false;
+    boolean prettyPrint = ctx.queryParam("pretty") != null;
     long beginJsonTs = System.currentTimeMillis();
     String result =
-        prettyPrint ? mapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj) : mapper.writeValueAsString(obj);
+        prettyPrint ? OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(obj) : OBJECT_MAPPER.writeValueAsString(obj);
     long endJsonTs = System.currentTimeMillis();
-    logger.debug("Jsonify TimeTaken=" + (endJsonTs - beginJsonTs));
+    LOG.debug("Jsonify TimeTaken=" + (endJsonTs - beginJsonTs));
     ctx.result(result);
   }
 
   /**
-   * Register Timeline API calls
+   * Register Timeline API calls.
    */
   private void registerTimelineAPI() {
     app.get(RemoteHoodieTableFileSystemView.LAST_INSTANT, new ViewHandler(ctx -> {
@@ -156,7 +156,7 @@ public class FileSystemViewHandler {
   }
 
   /**
-   * Register Data-Files API calls
+   * Register Data-Files API calls.
    */
   private void registerDataFilesAPI() {
     app.get(RemoteHoodieTableFileSystemView.LATEST_PARTITION_DATA_FILES_URL, new ViewHandler(ctx -> {
@@ -213,7 +213,7 @@ public class FileSystemViewHandler {
   }
 
   /**
-   * Register File Slices API calls
+   * Register File Slices API calls.
    */
   private void registerFileSlicesAPI() {
     app.get(RemoteHoodieTableFileSystemView.LATEST_PARTITION_SLICES_URL, new ViewHandler(ctx -> {
@@ -265,7 +265,7 @@ public class FileSystemViewHandler {
           ctx.validatedQueryParam(RemoteHoodieTableFileSystemView.BASEPATH_PARAM).getOrThrow(),
           ctx.validatedQueryParam(RemoteHoodieTableFileSystemView.PARTITION_PARAM).getOrThrow(),
           ctx.validatedQueryParam(RemoteHoodieTableFileSystemView.MAX_INSTANT_PARAM).getOrThrow(),
-          Boolean.valueOf(
+          Boolean.parseBoolean(
               ctx.validatedQueryParam(RemoteHoodieTableFileSystemView.INCLUDE_FILES_IN_PENDING_COMPACTION_PARAM)
                   .getOrThrow()));
       writeValueAsString(ctx, dtos);
@@ -292,7 +292,7 @@ public class FileSystemViewHandler {
   }
 
   private static boolean isRefreshCheckDisabledInQuery(Context ctxt) {
-    return Boolean.valueOf(ctxt.queryParam(RemoteHoodieTableFileSystemView.REFRESH_OFF));
+    return Boolean.parseBoolean(ctxt.queryParam(RemoteHoodieTableFileSystemView.REFRESH_OFF));
   }
 
   /**
@@ -345,12 +345,12 @@ public class FileSystemViewHandler {
         }
       } catch (RuntimeException re) {
         success = false;
-        logger.error("Got runtime exception servicing request " + context.queryString(), re);
+        LOG.error("Got runtime exception servicing request " + context.queryString(), re);
         throw re;
       } finally {
         long endTs = System.currentTimeMillis();
         long timeTakenMillis = endTs - beginTs;
-        logger
+        LOG
             .info(String.format(
                 "TimeTakenMillis[Total=%d, Refresh=%d, handle=%d, Check=%d], "
                     + "Success=%s, Query=%s, Host=%s, synced=%s",

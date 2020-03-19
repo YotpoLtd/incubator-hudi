@@ -18,14 +18,6 @@
 
 package org.apache.hudi;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.File;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.apache.hudi.common.HoodieTestDataGenerator;
 import org.apache.hudi.common.model.HoodieCleaningPolicy;
 import org.apache.hudi.common.model.HoodieDataFile;
@@ -41,16 +33,26 @@ import org.apache.hudi.config.HoodieWriteConfig;
 import org.apache.hudi.exception.HoodieRollbackException;
 import org.apache.hudi.index.HoodieIndex;
 import org.apache.hudi.table.HoodieTable;
+
 import org.apache.spark.api.java.JavaRDD;
 import org.junit.Test;
 
+import java.io.File;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 /**
- * Test Cases for rollback of snapshots and commits
+ * Test Cases for rollback of snapshots and commits.
  */
 public class TestClientRollback extends TestHoodieClientBase {
 
   /**
-   * Test case for rollback-savepoint interaction
+   * Test case for rollback-savepoint interaction.
    */
   @Test
   public void testSavepointAndRollback() throws Exception {
@@ -125,9 +127,7 @@ public class TestClientRollback extends TestHoodieClientBase {
       table = HoodieTable.getHoodieTable(metaClient, getConfig(), jsc);
       final ReadOptimizedView view2 = table.getROFileSystemView();
 
-      dataFiles = partitionPaths.stream().flatMap(s -> {
-        return view2.getAllDataFiles(s).filter(f -> f.getCommitTime().equals("004"));
-      }).collect(Collectors.toList());
+      dataFiles = partitionPaths.stream().flatMap(s -> view2.getAllDataFiles(s).filter(f -> f.getCommitTime().equals("004"))).collect(Collectors.toList());
       assertEquals("The data files for commit 004 should be present", 3, dataFiles.size());
 
       // rolling back to a non existent savepoint must not succeed
@@ -163,7 +163,7 @@ public class TestClientRollback extends TestHoodieClientBase {
   }
 
   /**
-   * Test Cases for effects of rollbacking completed/inflight commits
+   * Test Cases for effects of rollbacking completed/inflight commits.
    */
   @Test
   public void testRollbackCommit() throws Exception {
@@ -203,7 +203,7 @@ public class TestClientRollback extends TestHoodieClientBase {
       // Rollback commit 1 (this should fail, since commit2 is still around)
       try {
         client.rollback(commitTime1);
-        assertTrue("Should have thrown an exception ", false);
+        fail("Should have thrown an exception ");
       } catch (HoodieRollbackException hrbe) {
         // should get here
       }
@@ -253,7 +253,7 @@ public class TestClientRollback extends TestHoodieClientBase {
   }
 
   /**
-   * Test auto-rollback of commits which are in flight
+   * Test auto-rollback of commits which are in flight.
    */
   @Test
   public void testAutoRollbackInflightCommit() throws Exception {
@@ -261,6 +261,8 @@ public class TestClientRollback extends TestHoodieClientBase {
     String commitTime1 = "20160501010101";
     String commitTime2 = "20160502020601";
     String commitTime3 = "20160506030611";
+    String commitTime4 = "20160506030621";
+    String commitTime5 = "20160506030631";
     new File(basePath + "/.hoodie").mkdirs();
     HoodieTestDataGenerator.writePartitionMetadata(fs, new String[] {"2016/05/01", "2016/05/02", "2016/05/06"},
         basePath);
@@ -290,7 +292,7 @@ public class TestClientRollback extends TestHoodieClientBase {
         .withIndexConfig(HoodieIndexConfig.newBuilder().withIndexType(HoodieIndex.IndexType.INMEMORY).build()).build();
 
     try (HoodieWriteClient client = getHoodieWriteClient(config, false);) {
-
+      client.startCommitWithTime(commitTime4);
       // Check results, nothing changed
       assertTrue(HoodieTestUtils.doesCommitExist(basePath, commitTime1));
       assertTrue(HoodieTestUtils.doesInflightExist(basePath, commitTime2));
@@ -308,7 +310,7 @@ public class TestClientRollback extends TestHoodieClientBase {
 
     // Turn auto rollback on
     try (HoodieWriteClient client = getHoodieWriteClient(config, true)) {
-      client.startCommit();
+      client.startCommitWithTime(commitTime5);
       assertTrue(HoodieTestUtils.doesCommitExist(basePath, commitTime1));
       assertFalse(HoodieTestUtils.doesInflightExist(basePath, commitTime2));
       assertFalse(HoodieTestUtils.doesInflightExist(basePath, commitTime3));

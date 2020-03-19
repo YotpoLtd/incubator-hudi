@@ -18,18 +18,6 @@
 
 package org.apache.hudi.table;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Sets;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 import org.apache.hudi.WriteStatus;
 import org.apache.hudi.avro.model.HoodieCompactionPlan;
 import org.apache.hudi.common.HoodieRollbackStat;
@@ -53,11 +41,24 @@ import org.apache.hudi.exception.HoodieUpsertException;
 import org.apache.hudi.func.MergeOnReadLazyInsertIterable;
 import org.apache.hudi.io.HoodieAppendHandle;
 import org.apache.hudi.io.compact.HoodieRealtimeTableCompactor;
+
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.spark.Partitioner;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of a more real-time read-optimized Hoodie Table where
@@ -76,7 +77,7 @@ import org.apache.spark.api.java.JavaSparkContext;
  */
 public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends HoodieCopyOnWriteTable<T> {
 
-  private static Logger logger = LogManager.getLogger(HoodieMergeOnReadTable.class);
+  private static final Logger LOG = LogManager.getLogger(HoodieMergeOnReadTable.class);
 
   // UpsertPartitioner for MergeOnRead table type
   private MergeOnReadUpsertPartitioner mergeOnReadUpsertPartitioner;
@@ -97,10 +98,10 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
   @Override
   public Iterator<List<WriteStatus>> handleUpdate(String commitTime, String fileId, Iterator<HoodieRecord<T>> recordItr)
       throws IOException {
-    logger.info("Merging updates for commit " + commitTime + " for file " + fileId);
+    LOG.info("Merging updates for commit " + commitTime + " for file " + fileId);
 
     if (!index.canIndexLogFiles() && mergeOnReadUpsertPartitioner.getSmallFileIds().contains(fileId)) {
-      logger.info("Small file corrections for updates for commit " + commitTime + " for file " + fileId);
+      LOG.info("Small file corrections for updates for commit " + commitTime + " for file " + fileId);
       return super.handleUpdate(commitTime, fileId, recordItr);
     } else {
       HoodieAppendHandle<T> appendHandle = new HoodieAppendHandle<>(config, commitTime, this, fileId, recordItr);
@@ -123,7 +124,7 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
 
   @Override
   public HoodieCompactionPlan scheduleCompaction(JavaSparkContext jsc, String instantTime) {
-    logger.info("Checking if compaction needs to be run on " + config.getBasePath());
+    LOG.info("Checking if compaction needs to be run on " + config.getBasePath());
     Option<HoodieInstant> lastCompaction =
         getActiveTimeline().getCommitTimeline().filterCompletedInstants().lastInstant();
     String deltaCommitsSinceTs = "0";
@@ -134,13 +135,13 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
     int deltaCommitsSinceLastCompaction = getActiveTimeline().getDeltaCommitTimeline()
         .findInstantsAfter(deltaCommitsSinceTs, Integer.MAX_VALUE).countInstants();
     if (config.getInlineCompactDeltaCommitMax() > deltaCommitsSinceLastCompaction) {
-      logger.info("Not running compaction as only " + deltaCommitsSinceLastCompaction
+      LOG.info("Not running compaction as only " + deltaCommitsSinceLastCompaction
           + " delta commits was found since last compaction " + deltaCommitsSinceTs + ". Waiting for "
           + config.getInlineCompactDeltaCommitMax());
       return new HoodieCompactionPlan();
     }
 
-    logger.info("Compacting merge on read table " + config.getBasePath());
+    LOG.info("Compacting merge on read table " + config.getBasePath());
     HoodieRealtimeTableCompactor compactor = new HoodieRealtimeTableCompactor();
     try {
       return compactor.generateCompactionPlan(jsc, this, config, instantTime,
@@ -165,41 +166,48 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
   }
 
   @Override
-  public List<HoodieRollbackStat> rollback(JavaSparkContext jsc, String commit, boolean deleteInstants)
-      throws IOException {
+  public List<HoodieRollbackStat> rollback(JavaSparkContext jsc, HoodieInstant instant,
+      boolean deleteInstants) throws IOException {
+    long startTime = System.currentTimeMillis();
+
+    String commit = instant.getTimestamp();
+    LOG.error("Rolling back instant " + instant);
+
+    // Atomically un-publish all non-inflight commits
+    if (instant.isCompleted()) {
+      LOG.error("Un-publishing instant " + instant + ", deleteInstants=" + deleteInstants);
+      instant = this.getActiveTimeline().revertToInflight(instant);
+    }
+
+    List<HoodieRollbackStat> allRollbackStats = new ArrayList<>();
+
     // At the moment, MOR table type does not support bulk nested rollbacks. Nested rollbacks is an experimental
     // feature that is expensive. To perform nested rollbacks, initiate multiple requests of client.rollback
     // (commitToRollback).
     // NOTE {@link HoodieCompactionConfig#withCompactionLazyBlockReadEnabled} needs to be set to TRUE. This is
     // required to avoid OOM when merging multiple LogBlocks performed during nested rollbacks.
     // Atomically un-publish all non-inflight commits
-    Option<HoodieInstant> commitOrCompactionOption = Option.fromJavaOptional(this.getActiveTimeline()
-        .getTimelineOfActions(Sets.newHashSet(HoodieActiveTimeline.COMMIT_ACTION,
-            HoodieActiveTimeline.DELTA_COMMIT_ACTION, HoodieActiveTimeline.COMPACTION_ACTION))
-        .getInstants().filter(i -> commit.equals(i.getTimestamp())).findFirst());
-    HoodieInstant instantToRollback = commitOrCompactionOption.get();
     // Atomically un-publish all non-inflight commits
-    if (!instantToRollback.isInflight()) {
-      this.getActiveTimeline().revertToInflight(instantToRollback);
+    // For Requested State (like failure during index lookup), there is nothing to do rollback other than
+    // deleting the timeline file
+    if (!instant.isRequested()) {
+      LOG.info("Unpublished " + commit);
+      List<RollbackRequest> rollbackRequests = generateRollbackRequests(jsc, instant);
+      // TODO: We need to persist this as rollback workload and use it in case of partial failures
+      allRollbackStats = new RollbackExecutor(metaClient, config).performRollback(jsc, instant, rollbackRequests);
     }
-    logger.info("Unpublished " + commit);
-    Long startTime = System.currentTimeMillis();
-    List<RollbackRequest> rollbackRequests = generateRollbackRequests(jsc, instantToRollback);
-    // TODO: We need to persist this as rollback workload and use it in case of partial failures
-    List<HoodieRollbackStat> allRollbackStats =
-        new RollbackExecutor(metaClient, config).performRollback(jsc, instantToRollback, rollbackRequests);
-    // Delete Inflight instants if enabled
-    deleteInflightInstant(deleteInstants, this.getActiveTimeline(),
-        new HoodieInstant(true, instantToRollback.getAction(), instantToRollback.getTimestamp()));
 
-    logger.info("Time(in ms) taken to finish rollback " + (System.currentTimeMillis() - startTime));
+    // Delete Inflight instants if enabled
+    deleteInflightAndRequestedInstant(deleteInstants, this.getActiveTimeline(), instant);
+
+    LOG.info("Time(in ms) taken to finish rollback " + (System.currentTimeMillis() - startTime));
 
     return allRollbackStats;
   }
 
   /**
    * Generate all rollback requests that we need to perform for rolling back this action without actually performing
-   * rolling back
+   * rolling back.
    * 
    * @param jsc JavaSparkContext
    * @param instantToRollback Instant to Rollback
@@ -217,8 +225,8 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
       List<RollbackRequest> partitionRollbackRequests = new ArrayList<>();
       switch (instantToRollback.getAction()) {
         case HoodieTimeline.COMMIT_ACTION:
-          logger.info(
-              "Rolling back commit action. There are higher delta commits. So only rolling back this " + "instant");
+          LOG.info(
+              "Rolling back commit action. There are higher delta commits. So only rolling back this instant");
           partitionRollbackRequests.add(
               RollbackRequest.createRollbackRequestWithDeleteDataAndLogFilesAction(partitionPath, instantToRollback));
           break;
@@ -233,14 +241,14 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
             // and has not yet finished. In this scenario we should delete only the newly created parquet files
             // and not corresponding base commit log files created with this as baseCommit since updates would
             // have been written to the log files.
-            logger.info("Rolling back compaction. There are higher delta commits. So only deleting data files");
+            LOG.info("Rolling back compaction. There are higher delta commits. So only deleting data files");
             partitionRollbackRequests.add(
                 RollbackRequest.createRollbackRequestWithDeleteDataFilesOnlyAction(partitionPath, instantToRollback));
           } else {
             // No deltacommits present after this compaction commit (inflight or requested). In this case, we
             // can also delete any log files that were created with this compaction commit as base
             // commit.
-            logger.info("Rolling back compaction plan. There are NO higher delta commits. So deleting both data and"
+            LOG.info("Rolling back compaction plan. There are NO higher delta commits. So deleting both data and"
                 + " log files");
             partitionRollbackRequests.add(
                 RollbackRequest.createRollbackRequestWithDeleteDataAndLogFilesAction(partitionPath, instantToRollback));
@@ -337,14 +345,9 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
           // TODO : choose last N small files since there can be multiple small files written to a single partition
           // by different spark partitions in a single batch
           Option<FileSlice> smallFileSlice = Option.fromJavaOptional(getRTFileSystemView()
-              .getLatestFileSlicesBeforeOrOn(partitionPath, latestCommitTime.getTimestamp(), false)
-              .filter(fileSlice -> fileSlice.getLogFiles().count() < 1
-                  && fileSlice.getDataFile().get().getFileSize() < config.getParquetSmallFileLimit())
-              .sorted((FileSlice left,
-                  FileSlice right) -> left.getDataFile().get().getFileSize() < right.getDataFile().get().getFileSize()
-                      ? -1
-                      : 1)
-              .findFirst());
+                  .getLatestFileSlicesBeforeOrOn(partitionPath, latestCommitTime.getTimestamp(), false)
+                  .filter(fileSlice -> fileSlice.getLogFiles().count() < 1 && fileSlice.getDataFile().get().getFileSize() < config.getParquetSmallFileLimit())
+                  .min((FileSlice left, FileSlice right) -> left.getDataFile().get().getFileSize() < right.getDataFile().get().getFileSize() ? -1 : 1));
           if (smallFileSlice.isPresent()) {
             allSmallFileSlices.add(smallFileSlice.get());
           }
@@ -355,7 +358,7 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
               getRTFileSystemView().getLatestFileSlicesBeforeOrOn(partitionPath, latestCommitTime.getTimestamp(), true)
                   .collect(Collectors.toList());
           for (FileSlice fileSlice : allFileSlices) {
-            if (isSmallFile(partitionPath, fileSlice)) {
+            if (isSmallFile(fileSlice)) {
               allSmallFileSlices.add(fileSlice);
             }
           }
@@ -367,7 +370,7 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
             // TODO : Move logic of file name, file id, base commit time handling inside file slice
             String filename = smallFileSlice.getDataFile().get().getFileName();
             sf.location = new HoodieRecordLocation(FSUtils.getCommitTime(filename), FSUtils.getFileId(filename));
-            sf.sizeBytes = getTotalFileSize(partitionPath, smallFileSlice);
+            sf.sizeBytes = getTotalFileSize(smallFileSlice);
             smallFileLocations.add(sf);
             // Update the global small files list
             smallFiles.add(sf);
@@ -375,7 +378,7 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
             HoodieLogFile logFile = smallFileSlice.getLogFiles().findFirst().get();
             sf.location = new HoodieRecordLocation(FSUtils.getBaseCommitTimeFromLogPath(logFile.getPath()),
                 FSUtils.getFileIdFromLogPath(logFile.getPath()));
-            sf.sizeBytes = getTotalFileSize(partitionPath, smallFileSlice);
+            sf.sizeBytes = getTotalFileSize(smallFileSlice);
             smallFileLocations.add(sf);
             // Update the global small files list
             smallFiles.add(sf);
@@ -390,7 +393,7 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
           .collect(Collectors.toList());
     }
 
-    private long getTotalFileSize(String partitionPath, FileSlice fileSlice) {
+    private long getTotalFileSize(FileSlice fileSlice) {
       if (!fileSlice.getDataFile().isPresent()) {
         return convertLogFilesSizeToExpectedParquetSize(fileSlice.getLogFiles().collect(Collectors.toList()));
       } else {
@@ -399,22 +402,20 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
       }
     }
 
-    private boolean isSmallFile(String partitionPath, FileSlice fileSlice) {
-      long totalSize = getTotalFileSize(partitionPath, fileSlice);
+    private boolean isSmallFile(FileSlice fileSlice) {
+      long totalSize = getTotalFileSize(fileSlice);
       return totalSize < config.getParquetMaxFileSize();
     }
 
     // TODO (NA) : Make this static part of utility
     @VisibleForTesting
     public long convertLogFilesSizeToExpectedParquetSize(List<HoodieLogFile> hoodieLogFiles) {
-      long totalSizeOfLogFiles = hoodieLogFiles.stream().map(hoodieLogFile -> hoodieLogFile.getFileSize())
-          .filter(size -> size > 0).reduce((a, b) -> (a + b)).orElse(0L);
+      long totalSizeOfLogFiles = hoodieLogFiles.stream().map(HoodieLogFile::getFileSize)
+          .filter(size -> size > 0).reduce(Long::sum).orElse(0L);
       // Here we assume that if there is no base parquet file, all log files contain only inserts.
       // We can then just get the parquet equivalent size of these log files, compare that with
       // {@link config.getParquetMaxFileSize()} and decide if there is scope to insert more rows
-      long logFilesEquivalentParquetFileSize =
-          (long) (totalSizeOfLogFiles * config.getLogFileToParquetCompressionRatio());
-      return logFilesEquivalentParquetFileSize;
+      return (long) (totalSizeOfLogFiles * config.getLogFileToParquetCompressionRatio());
     }
   }
 
@@ -432,7 +433,7 @@ public class HoodieMergeOnReadTable<T extends HoodieRecordPayload> extends Hoodi
     return commitMetadata.getPartitionToWriteStats().get(partitionPath).stream().filter(wStat -> {
 
       // Filter out stats without prevCommit since they are all inserts
-      boolean validForRollback = (wStat != null) && (wStat.getPrevCommit() != HoodieWriteStat.NULL_COMMIT)
+      boolean validForRollback = (wStat != null) && (!wStat.getPrevCommit().equals(HoodieWriteStat.NULL_COMMIT))
           && (wStat.getPrevCommit() != null) && fileIdToBaseCommitTimeForLogMap.containsKey(wStat.getFileId());
 
       if (validForRollback) {

@@ -18,25 +18,6 @@
 
 package org.apache.hudi.common.table.view;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
 import org.apache.hudi.avro.model.HoodieCompactionPlan;
 import org.apache.hudi.common.HoodieCommonTestHarness;
 import org.apache.hudi.common.model.CompactionOperation;
@@ -57,16 +38,40 @@ import org.apache.hudi.common.util.CompactionUtils;
 import org.apache.hudi.common.util.FSUtils;
 import org.apache.hudi.common.util.Option;
 import org.apache.hudi.common.util.collection.Pair;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+/**
+ * Tests hoodie table file system view {@link HoodieTableFileSystemView}.
+ */
 @SuppressWarnings("ResultOfMethodCallIgnored")
 public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
 
-  private static final transient Logger log = LogManager.getLogger(TestHoodieTableFileSystemView.class);
+  private static final Logger LOG = LogManager.getLogger(TestHoodieTableFileSystemView.class);
 
   private static String TEST_WRITE_TOKEN = "1-0-1";
 
@@ -124,9 +129,9 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     HoodieInstant deltaInstant2 = new HoodieInstant(true, HoodieTimeline.DELTA_COMMIT_ACTION, deltaInstantTime1);
     HoodieInstant deltaInstant3 = new HoodieInstant(true, HoodieTimeline.DELTA_COMMIT_ACTION, deltaInstantTime2);
 
-    commitTimeline.saveAsComplete(instant1, Option.empty());
-    commitTimeline.saveAsComplete(deltaInstant2, Option.empty());
-    commitTimeline.saveAsComplete(deltaInstant3, Option.empty());
+    saveAsComplete(commitTimeline, instant1, Option.empty());
+    saveAsComplete(commitTimeline, deltaInstant2, Option.empty());
+    saveAsComplete(commitTimeline, deltaInstant3, Option.empty());
 
     refreshFsView();
 
@@ -219,7 +224,7 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
   }
 
   /**
-   * Helper method to test Views in the presence of concurrent compaction
+   * Helper method to test Views in the presence of concurrent compaction.
    * 
    * @param skipCreatingDataFile if set, first File Slice will not have data-file set. This would simulate inserts going
    *        directly to log files
@@ -257,9 +262,9 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     HoodieInstant deltaInstant2 = new HoodieInstant(true, HoodieTimeline.DELTA_COMMIT_ACTION, deltaInstantTime1);
     HoodieInstant deltaInstant3 = new HoodieInstant(true, HoodieTimeline.DELTA_COMMIT_ACTION, deltaInstantTime2);
 
-    commitTimeline.saveAsComplete(instant1, Option.empty());
-    commitTimeline.saveAsComplete(deltaInstant2, Option.empty());
-    commitTimeline.saveAsComplete(deltaInstant3, Option.empty());
+    saveAsComplete(commitTimeline, instant1, Option.empty());
+    saveAsComplete(commitTimeline, deltaInstant2, Option.empty());
+    saveAsComplete(commitTimeline, deltaInstant3, Option.empty());
 
     refreshFsView();
     List<FileSlice> fileSlices = rtView.getLatestFileSlices(partitionPath).collect(Collectors.toList());
@@ -289,7 +294,7 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     assertEquals("Base-Instant must be compaction Instant", compactionRequestedTime,
         slices.get(0).getBaseInstantTime());
     assertFalse("Latest File Slice must not have data-file", slices.get(0).getDataFile().isPresent());
-    assertTrue("Latest File Slice must not have any log-files", slices.get(0).getLogFiles().count() == 0);
+    assertEquals("Latest File Slice must not have any log-files", 0, slices.get(0).getLogFiles().count());
 
     // Fake delta-ingestion after compaction-requested
     String deltaInstantTime4 = "5";
@@ -304,8 +309,8 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     new File(basePath + "/" + partitionPath + "/" + fileName4).createNewFile();
     HoodieInstant deltaInstant4 = new HoodieInstant(true, HoodieTimeline.DELTA_COMMIT_ACTION, deltaInstantTime4);
     HoodieInstant deltaInstant5 = new HoodieInstant(true, HoodieTimeline.DELTA_COMMIT_ACTION, deltaInstantTime5);
-    commitTimeline.saveAsComplete(deltaInstant4, Option.empty());
-    commitTimeline.saveAsComplete(deltaInstant5, Option.empty());
+    saveAsComplete(commitTimeline, deltaInstant4, Option.empty());
+    saveAsComplete(commitTimeline, deltaInstant5, Option.empty());
     refreshFsView();
 
     List<HoodieDataFile> dataFiles = roView.getAllDataFiles(partitionPath).collect(Collectors.toList());
@@ -355,36 +360,28 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
       assertEquals("Expect no data file to be returned", 0, dataFiles.size());
     } else {
       assertEquals("Expect only one data-file to be sent", 1, dataFiles.size());
-      dataFiles.stream().forEach(df -> {
-        assertEquals("Expect data-file for instant 1 be returned", df.getCommitTime(), instantTime1);
-      });
+      dataFiles.forEach(df -> assertEquals("Expect data-file for instant 1 be returned", df.getCommitTime(), instantTime1));
     }
     dataFiles = roView.getLatestDataFiles(partitionPath).collect(Collectors.toList());
     if (skipCreatingDataFile) {
       assertEquals("Expect no data file to be returned", 0, dataFiles.size());
     } else {
       assertEquals("Expect only one data-file to be sent", 1, dataFiles.size());
-      dataFiles.stream().forEach(df -> {
-        assertEquals("Expect data-file for instant 1 be returned", df.getCommitTime(), instantTime1);
-      });
+      dataFiles.forEach(df -> assertEquals("Expect data-file for instant 1 be returned", df.getCommitTime(), instantTime1));
     }
     dataFiles = roView.getLatestDataFilesBeforeOrOn(partitionPath, deltaInstantTime5).collect(Collectors.toList());
     if (skipCreatingDataFile) {
       assertEquals("Expect no data file to be returned", 0, dataFiles.size());
     } else {
       assertEquals("Expect only one data-file to be sent", 1, dataFiles.size());
-      dataFiles.stream().forEach(df -> {
-        assertEquals("Expect data-file for instant 1 be returned", df.getCommitTime(), instantTime1);
-      });
+      dataFiles.forEach(df -> assertEquals("Expect data-file for instant 1 be returned", df.getCommitTime(), instantTime1));
     }
     dataFiles = roView.getLatestDataFilesInRange(allInstantTimes).collect(Collectors.toList());
     if (skipCreatingDataFile) {
       assertEquals("Expect no data file to be returned", 0, dataFiles.size());
     } else {
       assertEquals("Expect only one data-file to be sent", 1, dataFiles.size());
-      dataFiles.stream().forEach(df -> {
-        assertEquals("Expect data-file for instant 1 be returned", df.getCommitTime(), instantTime1);
-      });
+      dataFiles.forEach(df -> assertEquals("Expect data-file for instant 1 be returned", df.getCommitTime(), instantTime1));
     }
 
     /** Inflight/Orphan File-groups needs to be in the view **/
@@ -410,9 +407,10 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
         inflightDeltaInstantTime, 0, TEST_WRITE_TOKEN);
     new File(basePath + "/" + partitionPath + "/" + inflightLogFileName).createNewFile();
     // Mark instant as inflight
-    commitTimeline.saveToInflight(
-        new HoodieInstant(State.INFLIGHT, HoodieTimeline.DELTA_COMMIT_ACTION, inflightDeltaInstantTime),
-        Option.empty());
+    commitTimeline.createNewInstant(new HoodieInstant(State.REQUESTED, HoodieTimeline.DELTA_COMMIT_ACTION,
+        inflightDeltaInstantTime));
+    commitTimeline.transitionRequestedToInflight(new HoodieInstant(State.REQUESTED, HoodieTimeline.DELTA_COMMIT_ACTION,
+        inflightDeltaInstantTime), Option.empty());
     refreshFsView();
 
     List<FileSlice> allRawFileSlices = getAllRawFileSlices(partitionPath).collect(Collectors.toList());
@@ -475,25 +473,23 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
       assertEquals("Inflight File Slice with log-file check data-file", inflightLogFileName,
           logFiles.get(0).getFileName());
     }
+
+    compactionInstant = new HoodieInstant(State.INFLIGHT, HoodieTimeline.COMPACTION_ACTION, compactionRequestedTime);
     // Now simulate Compaction completing - Check the view
     if (!isCompactionInFlight) {
       // For inflight compaction, we already create a data-file to test concurrent inflight case.
       // If we skipped creating data file corresponding to compaction commit, create it now
       new File(basePath + "/" + partitionPath + "/" + compactDataFileName).createNewFile();
+      commitTimeline.createNewInstant(compactionInstant);
     }
-    if (isCompactionInFlight) {
-      commitTimeline.deleteInflight(compactionInstant);
-    } else {
-      commitTimeline.deleteCompactionRequested(compactionInstant);
-    }
-    compactionInstant = new HoodieInstant(State.INFLIGHT, HoodieTimeline.COMPACTION_ACTION, compactionRequestedTime);
+
     commitTimeline.saveAsComplete(compactionInstant, Option.empty());
     refreshFsView();
     // populate the cache
     roView.getAllDataFiles(partitionPath);
 
     fileSliceList = rtView.getLatestFileSlices(partitionPath).collect(Collectors.toList());
-    log.info("FILESLICE LIST=" + fileSliceList);
+    LOG.info("FILESLICE LIST=" + fileSliceList);
     dataFiles = fileSliceList.stream().map(FileSlice::getDataFile).filter(Option::isPresent).map(Option::get)
         .collect(Collectors.toList());
     assertEquals("Expect only one data-files in latest view as there is only one file-group", 1, dataFiles.size());
@@ -513,24 +509,16 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     /** Data Files API tests */
     dataFiles = roView.getLatestDataFiles().collect(Collectors.toList());
     assertEquals("Expect only one data-file to be sent", 1, dataFiles.size());
-    dataFiles.stream().forEach(df -> {
-      assertEquals("Expect data-file created by compaction be returned", df.getCommitTime(), compactionRequestedTime);
-    });
+    dataFiles.forEach(df -> assertEquals("Expect data-file created by compaction be returned", df.getCommitTime(), compactionRequestedTime));
     dataFiles = roView.getLatestDataFiles(partitionPath).collect(Collectors.toList());
     assertEquals("Expect only one data-file to be sent", 1, dataFiles.size());
-    dataFiles.stream().forEach(df -> {
-      assertEquals("Expect data-file created by compaction be returned", df.getCommitTime(), compactionRequestedTime);
-    });
+    dataFiles.forEach(df -> assertEquals("Expect data-file created by compaction be returned", df.getCommitTime(), compactionRequestedTime));
     dataFiles = roView.getLatestDataFilesBeforeOrOn(partitionPath, deltaInstantTime5).collect(Collectors.toList());
     assertEquals("Expect only one data-file to be sent", 1, dataFiles.size());
-    dataFiles.stream().forEach(df -> {
-      assertEquals("Expect data-file created by compaction be returned", df.getCommitTime(), compactionRequestedTime);
-    });
+    dataFiles.forEach(df -> assertEquals("Expect data-file created by compaction be returned", df.getCommitTime(), compactionRequestedTime));
     dataFiles = roView.getLatestDataFilesInRange(allInstantTimes).collect(Collectors.toList());
     assertEquals("Expect only one data-file to be sent", 1, dataFiles.size());
-    dataFiles.stream().forEach(df -> {
-      assertEquals("Expect data-file created by compaction be returned", df.getCommitTime(), compactionRequestedTime);
-    });
+    dataFiles.forEach(df -> assertEquals("Expect data-file created by compaction be returned", df.getCommitTime(), compactionRequestedTime));
 
     assertEquals("Total number of file-slices in partitions matches expected", expTotalFileSlices,
         rtView.getAllFileSlices(partitionPath).count());
@@ -548,7 +536,7 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     String fileId = UUID.randomUUID().toString();
 
     assertFalse("No commit, should not find any data file", roView.getLatestDataFiles(partitionPath)
-        .filter(dfile -> dfile.getFileId().equals(fileId)).findFirst().isPresent());
+        .anyMatch(dfile -> dfile.getFileId().equals(fileId)));
 
     // Only one commit, but is not safe
     String commitTime1 = "1";
@@ -556,12 +544,12 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     new File(basePath + "/" + partitionPath + "/" + fileName1).createNewFile();
     refreshFsView();
     assertFalse("No commit, should not find any data file", roView.getLatestDataFiles(partitionPath)
-        .filter(dfile -> dfile.getFileId().equals(fileId)).findFirst().isPresent());
+        .anyMatch(dfile -> dfile.getFileId().equals(fileId)));
 
     // Make this commit safe
     HoodieActiveTimeline commitTimeline = metaClient.getActiveTimeline();
     HoodieInstant instant1 = new HoodieInstant(true, HoodieTimeline.COMMIT_ACTION, commitTime1);
-    commitTimeline.saveAsComplete(instant1, Option.empty());
+    saveAsComplete(commitTimeline, instant1, Option.empty());
     refreshFsView();
     assertEquals("", fileName1, roView.getLatestDataFiles(partitionPath)
         .filter(dfile -> dfile.getFileId().equals(fileId)).findFirst().get().getFileName());
@@ -576,7 +564,7 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
 
     // Make it safe
     HoodieInstant instant2 = new HoodieInstant(true, HoodieTimeline.COMMIT_ACTION, commitTime2);
-    commitTimeline.saveAsComplete(instant2, Option.empty());
+    saveAsComplete(commitTimeline, instant2, Option.empty());
     refreshFsView();
     assertEquals("", fileName2, roView.getLatestDataFiles(partitionPath)
         .filter(dfile -> dfile.getFileId().equals(fileId)).findFirst().get().getFileName());
@@ -654,7 +642,7 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     List<FileSlice> allSlices = rtView.getAllFileSlices("2016/05/01").collect(Collectors.toList());
     assertEquals(isLatestFileSliceOnly ? 4 : 8, allSlices.size());
     Map<String, Long> fileSliceMap =
-        allSlices.stream().collect(Collectors.groupingBy(slice -> slice.getFileId(), Collectors.counting()));
+        allSlices.stream().collect(Collectors.groupingBy(FileSlice::getFileId, Collectors.counting()));
     assertEquals(isLatestFileSliceOnly ? 1 : 2, fileSliceMap.get(fileId1).longValue());
     assertEquals(isLatestFileSliceOnly ? 1 : 3, fileSliceMap.get(fileId2).longValue());
     assertEquals(isLatestFileSliceOnly ? 1 : 2, fileSliceMap.get(fileId3).longValue());
@@ -673,7 +661,7 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
 
     filenames = Sets.newHashSet();
     List<HoodieLogFile> logFilesList = rtView.getLatestFileSlicesBeforeOrOn("2016/05/01", commitTime4, true)
-        .map(slice -> slice.getLogFiles()).flatMap(logFileList -> logFileList).collect(Collectors.toList());
+        .map(FileSlice::getLogFiles).flatMap(logFileList -> logFileList).collect(Collectors.toList());
     assertEquals(logFilesList.size(), 4);
     for (HoodieLogFile logFile : logFilesList) {
       filenames.add(logFile.getFileName());
@@ -705,10 +693,9 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     }
 
     logFilesList = rtView.getLatestFileSlicesBeforeOrOn("2016/05/01", commitTime3, true)
-        .map(slice -> slice.getLogFiles()).flatMap(logFileList -> logFileList).collect(Collectors.toList());
+        .map(FileSlice::getLogFiles).flatMap(logFileList -> logFileList).collect(Collectors.toList());
     assertEquals(logFilesList.size(), 1);
-    assertTrue(logFilesList.get(0).getFileName()
-        .equals(FSUtils.makeLogFileName(fileId2, HoodieLogFile.DELTA_EXTENSION, commitTime3, 0, TEST_WRITE_TOKEN)));
+    assertEquals(logFilesList.get(0).getFileName(), FSUtils.makeLogFileName(fileId2, HoodieLogFile.DELTA_EXTENSION, commitTime3, 0, TEST_WRITE_TOKEN));
   }
 
   @Test
@@ -1038,9 +1025,9 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     HoodieInstant deltaInstant2 = new HoodieInstant(true, HoodieTimeline.DELTA_COMMIT_ACTION, deltaInstantTime1);
     HoodieInstant deltaInstant3 = new HoodieInstant(true, HoodieTimeline.DELTA_COMMIT_ACTION, deltaInstantTime2);
 
-    commitTimeline.saveAsComplete(instant1, Option.empty());
-    commitTimeline.saveAsComplete(deltaInstant2, Option.empty());
-    commitTimeline.saveAsComplete(deltaInstant3, Option.empty());
+    saveAsComplete(commitTimeline, instant1, Option.empty());
+    saveAsComplete(commitTimeline, deltaInstant2, Option.empty());
+    saveAsComplete(commitTimeline, deltaInstant3, Option.empty());
 
     // Now we list all partitions
     FileStatus[] statuses = metaClient.getFs().listStatus(
@@ -1085,10 +1072,8 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     metaClient.getActiveTimeline().transitionCompactionRequestedToInflight(requested);
 
     // Fake delta-ingestion after compaction-requested
-    String deltaInstantTime4 = "3";
+    String deltaInstantTime4 = "4";
     String deltaInstantTime5 = "6";
-    List<String> allInstantTimes = Arrays.asList(instantTime1, deltaInstantTime1, deltaInstantTime2,
-        compactionRequestedTime, deltaInstantTime4, deltaInstantTime5);
     String fileName3 =
         FSUtils.makeLogFileName(fileId, HoodieLogFile.DELTA_EXTENSION, compactionRequestedTime, 0, TEST_WRITE_TOKEN);
     String fileName4 =
@@ -1102,8 +1087,8 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
 
     HoodieInstant deltaInstant4 = new HoodieInstant(true, HoodieTimeline.DELTA_COMMIT_ACTION, deltaInstantTime4);
     HoodieInstant deltaInstant5 = new HoodieInstant(true, HoodieTimeline.DELTA_COMMIT_ACTION, deltaInstantTime5);
-    commitTimeline.saveAsComplete(deltaInstant4, Option.empty());
-    commitTimeline.saveAsComplete(deltaInstant5, Option.empty());
+    saveAsComplete(commitTimeline, deltaInstant4, Option.empty());
+    saveAsComplete(commitTimeline, deltaInstant5, Option.empty());
     refreshFsView();
 
     // Test Data Files
@@ -1115,7 +1100,7 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
     assertEquals("Expect only valid commit", "1", dataFiles.get(0).getCommitTime());
 
     /** Merge API Tests **/
-    Arrays.asList(partitionPath1, partitionPath2, partitionPath3).stream().forEach(partitionPath -> {
+    Arrays.asList(partitionPath1, partitionPath2, partitionPath3).forEach(partitionPath -> {
       List<FileSlice> fileSliceList =
           rtView.getLatestMergedFileSlicesBeforeOrOn(partitionPath, deltaInstantTime5).collect(Collectors.toList());
       assertEquals("Expect file-slice to be merged", 1, fileSliceList.size());
@@ -1161,6 +1146,17 @@ public class TestHoodieTableFileSystemView extends HoodieCommonTestHarness {
         .map(CompactionOperation::getFileId).collect(Collectors.toSet());
     Assert.assertEquals(1, fileIdsInCompaction.size());
     Assert.assertTrue(fileIdsInCompaction.contains(fileId));
+  }
+
+  private static void saveAsComplete(HoodieActiveTimeline timeline, HoodieInstant inflight, Option<byte[]> data) {
+    if (inflight.getAction().equals(HoodieTimeline.COMPACTION_ACTION)) {
+      timeline.transitionCompactionInflightToComplete(inflight, data);
+    } else {
+      HoodieInstant requested = new HoodieInstant(State.REQUESTED, inflight.getAction(), inflight.getTimestamp());
+      timeline.createNewInstant(requested);
+      timeline.transitionRequestedToInflight(requested, Option.empty());
+      timeline.saveAsComplete(inflight, data);
+    }
   }
 
   @Override

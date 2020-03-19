@@ -16,19 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hudi.utilities.sources;
+package org.apache.hudi.common.versioning.clean;
 
-import org.apache.avro.generic.GenericRecord;
-import org.apache.hudi.common.util.TypedProperties;
-import org.apache.hudi.utilities.schema.SchemaProvider;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.sql.SparkSession;
+import org.apache.hudi.avro.model.HoodieCleanMetadata;
+import org.apache.hudi.common.table.HoodieTableMetaClient;
+import org.apache.hudi.common.versioning.MetadataMigrator;
 
-public abstract class ParquetSource extends Source<JavaRDD<GenericRecord>> {
+import java.util.Arrays;
 
-  public ParquetSource(TypedProperties props, JavaSparkContext sparkContext, SparkSession sparkSession,
-      SchemaProvider schemaProvider) {
-    super(props, sparkContext, sparkSession, schemaProvider, SourceType.PARQUET);
+public class CleanMetadataMigrator extends MetadataMigrator<HoodieCleanMetadata> {
+
+  public CleanMetadataMigrator(HoodieTableMetaClient metaClient) {
+    super(metaClient,
+        Arrays
+            .asList(new CleanV1MigrationHandler(metaClient),
+                new CleanV2MigrationHandler(metaClient)));
   }
 }

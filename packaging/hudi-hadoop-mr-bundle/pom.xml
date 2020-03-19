@@ -68,6 +68,13 @@
                   <include>org.apache.hudi:hudi-hadoop-mr</include>
 
                   <include>org.apache.parquet:parquet-avro</include>
+                  <include>org.apache.parquet:parquet-column</include>
+                  <include>org.apache.parquet:parquet-common</include>
+                  <include>org.apache.parquet:parquet-encoding</include>
+                  <include>org.apache.parquet:parquet-hadoop</include>
+                  <include>org.apache.parquet:parquet-jackson</include>
+                  <include>org.apache.parquet:parquet-format</include>
+
                   <include>com.esotericsoftware:kryo-shaded</include>
                   <include>org.objenesis:objenesis</include>
                   <include>com.esotericsoftware:minlog</include>
@@ -90,6 +97,10 @@
                 <relocation>
                   <pattern>org.apache.avro.</pattern>
                   <shadedPattern>${mr.bundle.avro.shade.prefix}org.apache.avro.</shadedPattern>
+                </relocation>
+                <relocation>
+                  <pattern>org.apache.parquet.</pattern>
+                  <shadedPattern>${mr.bundle.parquet.shade.prefix}org.apache.parquet.</shadedPattern>
                 </relocation>
               </relocations>
               <createDependencyReducedPom>false</createDependencyReducedPom>

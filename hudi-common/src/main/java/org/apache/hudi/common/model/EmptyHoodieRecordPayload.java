@@ -16,20 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.hudi;
+package org.apache.hudi.common.model;
+
+import org.apache.hudi.common.util.Option;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.IndexedRecord;
-import org.apache.hudi.common.model.HoodieRecordPayload;
-import org.apache.hudi.common.util.Option;
 
 /**
- * Empty payload used for deletions
+ * Empty payload used for deletions.
  */
 public class EmptyHoodieRecordPayload implements HoodieRecordPayload<EmptyHoodieRecordPayload> {
 
-  public EmptyHoodieRecordPayload(GenericRecord record, Comparable orderingVal) {}
+  public EmptyHoodieRecordPayload() {
+  }
+
+  public EmptyHoodieRecordPayload(GenericRecord record, Comparable orderingVal) {
+  }
 
   @Override
   public EmptyHoodieRecordPayload preCombine(EmptyHoodieRecordPayload another) {
